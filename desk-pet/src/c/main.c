@@ -13,6 +13,13 @@ typedef enum {
   ACT_DINNER,
   ACT_PLAY,
   ACT_CHILL,
+  ACT_BRUSH,
+  ACT_COMMUTE,
+  ACT_MEETING,
+  ACT_GAME,
+  ACT_BATH,
+  ACT_READ,
+  ACT_WALK,
 } Activity;
 
 #define SCENE_W 32
@@ -335,6 +342,214 @@ static void scene_code(void) {
   box(GColorLightGray, 26 + (s_tick & 1), 10, 1, 1);
 }
 
+
+// Box clamped to the scene (for things that slide in from the edges).
+static void cbox(GColor c, int x, int y, int w, int h) {
+  if (x < 0) { w += x; x = 0; }
+  if (x + w > SCENE_W) w = SCENE_W - x;
+  if (w > 0 && h > 0) box(c, x, y, w, h);
+}
+
+static void scene_brush(void) {
+  room(GColorCeleste, GColorLightGray);
+  for (int i = 4; i < SCENE_W; i += 4) box(GColorBabyBlueEyes, i, 0, 1, FLOOR_Y);   // tiles
+  for (int j = 4; j < FLOOR_Y; j += 4) box(GColorBabyBlueEyes, 0, j, SCENE_W, 1);
+  // towel on a rail
+  box(GColorDarkGray, 29, 4, 2, 1);
+  box(GColorYellow, 29, 5, 2, 7);
+  // mirror
+  box(GColorDarkGray, 15, 1, 12, 9);
+  box(GColorWhite, 16, 2, 10, 7);
+  box(GColorCeleste, 17, 3, 2, 1);
+  px(17, 4, GColorCeleste);
+  // sink
+  box(GColorLightGray, 20, 15, 4, 3);
+  box(GColorWhite, 16, 12, 12, 3);
+  box(GColorDarkGray, 21, 10, 2, 2);
+  // pet brushing
+  pet(5, 10, (s_tick % 9) == 0, 1);
+  box(GColorWhite, 7, 14, 4, 2);                          // toothpaste foam
+  box(GColorCyan, 9 + (int)(s_tick & 1), 14, 4, 1);        // toothbrush
+  box(PET_OUT, 13, 14, 2, 1);                            // hand
+  // bubbles floating up
+  px(14, 9 - (int)(s_tick % 3), GColorWhite);
+  px(3, 8 + (int)((s_tick + 1) % 3), GColorWhite);
+}
+
+static void scene_commute(void) {
+  bool evening = s_hour >= 16;
+  box(evening ? GColorMelon : GColorCeleste, 0, 0, SCENE_W, 16);
+  box(evening ? GColorOrange : GColorYellow, 4, evening ? 10 : 2, 4, 3);
+  cloud(10, 3, 10);
+  // office building with blinking windows
+  box(GColorDarkGray, 22, 3, 8, 13);
+  for (int r = 0; r < 4; r++) {
+    for (int c = 0; c < 4; c++) {
+      bool lit = ((r * 3 + c + (int)(s_tick / 4)) % 3) == 0;
+      box(lit ? GColorYellow : GColorBabyBlueEyes, 23 + c * 2, 4 + r * 3, 1, 2);
+    }
+  }
+  // bus stop sign
+  box(GColorDarkGray, 3, 7, 1, 9);
+  box(GColorRed, 2, 5, 3, 3);
+  // pavement and road
+  box(GColorLightGray, 0, 16, SCENE_W, 2);
+  box(GColorDarkGray, 0, 18, SCENE_W, 3);
+  for (int i = 0; i < 5; i++) {
+    int x = i * 8 - (int)((s_tick * 2) % 8);
+    if (x >= 0) box(GColorYellow, x, 19, 4, 1);
+  }
+  // a little car drives past
+  int cx = (int)((s_tick * 2) % 40) - 7;
+  cbox(GColorRed, cx, 18, 7, 2);
+  cbox(GColorRed, cx + 1, 17, 4, 1);
+  cbox(GColorCeleste, cx + 2, 17, 2, 1);
+  cbox(GColorBlack, cx + 1, 20, 2, 1);
+  cbox(GColorBlack, cx + 4, 20, 2, 1);
+  // pet walking with a briefcase
+  int hop = (int)(s_tick & 1);
+  s_bob = 1;
+  pet(11, 9, (s_tick % 7) == 0, 0);
+  s_bob = 0;
+  px(19, 13 - hop, PET_OUT);
+  box(GColorWindsorTan, 19, 14 - hop, 3, 3);
+}
+
+static void scene_meeting(void) {
+  room(GColorBabyBlueEyes, GColorDarkGray);
+  // video-call screen on the wall
+  box(GColorDarkGray, 5, 1, 22, 10);
+  box(GColorBlack, 6, 2, 20, 8);
+  static const GColor avatar[4] = {GColorCyan, GColorYellow, GColorShockingPink, GColorGreen};
+  int speaker = (int)((s_tick / 3) % 4);
+  for (int i = 0; i < 4; i++) {
+    int tx = 7 + (i % 2) * 9, ty = 3 + (i / 2) * 3;
+    box(i == speaker ? GColorGreen : GColorDarkGray, tx, ty, 8, 3);
+    box(avatar[i], tx + 3, ty, 2, 2);
+    box(avatar[i], tx + 2, ty + 2, 4, 1);
+  }
+  // pet talking in the meeting
+  pet(12, 9, (s_tick % 7) == 0, (int)(((s_tick / 2) % 3) == 0));
+  // table in front
+  box(GColorWindsorTan, 3, 16, 26, 2);
+  box(GColorBulgarianRose, 4, 18, 24, 3);
+  box(GColorWhite, 6, 15, 4, 1);                          // papers
+  box(GColorWhite, 25, 14, 2, 2);                         // coffee
+  px(25 + (int)(s_tick & 1), 12, GColorLightGray);
+}
+
+static void scene_game(void) {
+  room(GColorOxfordBlue, GColorImperialPurple);
+  // TV running a tiny space-shooter
+  box(GColorDarkGray, 16, 3, 14, 11);
+  box(GColorBlack, 17, 4, 12, 9);
+  for (int r = 0; r < 2; r++) {
+    for (int c = 0; c < 4; c++) {
+      box(r ? GColorMagenta : GColorGreen, 18 + c * 3 + (int)((s_tick / 2) % 2), 5 + r * 2, 2, 1);
+    }
+  }
+  int shipx = 19 + (int)(s_tick % 5) * 2;
+  box(GColorCyan, shipx, 12, 3, 1);
+  px(shipx + 1, 11, GColorCyan);
+  px(shipx + 1, 11 - 1 - (int)(s_tick % 4), GColorYellow);   // laser
+  box(GColorDarkGray, 21, 14, 4, 1);
+  // bean bag and pet with controller
+  pet(3, 9, (s_tick % 9) == 0, 0);
+  box(GColorDarkGray, 11, 14 + (int)(s_tick & 1), 3, 2);   // controller
+  box(GColorBlueMoon, 1, 15, 13, 3);
+  box(GColorBlueMoon, 3, 14, 9, 1);
+}
+
+static void scene_bath(void) {
+  room(GColorCeleste, GColorLightGray);
+  for (int i = 4; i < SCENE_W; i += 4) box(GColorBabyBlueEyes, i, 0, 1, FLOOR_Y);
+  for (int j = 4; j < FLOOR_Y; j += 4) box(GColorBabyBlueEyes, 0, j, SCENE_W, 1);
+  // steam
+  px(8 + (int)(s_tick % 3), 4, GColorWhite);
+  px(20 - (int)(s_tick % 3), 3, GColorWhite);
+  // pet in the tub
+  pet(12, 6, (s_tick % 7) == 0, 0);
+  box(GColorLightGray, 3, 11, 26, 1);
+  box(GColorWhite, 4, 12, 24, 7);
+  box(GColorPictonBlue, 5, 12, 22, 1);
+  box(GColorBabyBlueEyes, 5, 13, 22, 4);
+  box(GColorLightGray, 6, 19, 3, 1);                      // tub feet
+  box(GColorLightGray, 23, 19, 3, 1);
+  // bubbles
+  for (int i = 0; i < 5; i++) {
+    int bx = 6 + i * 5 + (int)((s_tick / 2 + i) % 2);
+    int by = 11 - (int)((s_tick + i) % 3);
+    if (i == 2) continue;                                   // leave room for the pet
+    px(bx, by, GColorWhite);
+    box(GColorWhite, bx + 1, 12, 2, 1);
+  }
+  // rubber duck bobbing
+  int bobd = (int)(s_tick & 1);
+  box(GColorYellow, 22, 10 + bobd, 3, 2);
+  px(23, 9 + bobd, GColorYellow);
+  px(25, 10 + bobd, GColorOrange);
+  px(23, 9 + bobd, GColorYellow);
+}
+
+static void scene_read(void) {
+  room(GColorImperialPurple, GColorBulgarianRose);
+  // night window
+  box(GColorWhite, 4, 2, 9, 8);
+  box(GColorOxfordBlue, 5, 3, 7, 6);
+  px(9, 4, GColorPastelYellow);
+  px(7, 6, GColorWhite);
+  px(10, 7, GColorWhite);
+  box(GColorWhite, 8, 2, 1, 8);
+  // bedside lamp
+  box(GColorWindsorTan, 25, 13, 6, 5);
+  box(GColorYellow, 26, 8, 4, 3);
+  box(GColorDarkGray, 27, 11, 2, 2);
+  // bed: headboard, pet sitting up, blanket, book
+  box(GColorWindsorTan, 3, 7, 2, 12);
+  pet(7, 5, (s_tick % 3) == 0, 0);
+  box(GColorWhite, 5, 11, 6, 5);                          // pillow behind
+  box(GColorCobaltBlue, 5, 12, 20, 6);
+  box(GColorBlueMoon, 5, 12, 20, 1);
+  box(GColorWindsorTan, 5, 18, 20, 2);
+  box(GColorWhite, 14, 10, 3, 4);                         // open book
+  box(GColorWhite, 17, 10, 3, 4);
+  box(GColorDarkGray, 17, 10, 1, 4);
+  if ((s_tick / 4) & 1) px(17, 9, GColorWhite);              // page flip
+  px(15, 11, GColorLightGray);
+  px(18, 12, GColorLightGray);
+}
+
+static void scene_walk(void) {
+  box(GColorCeleste, 0, 0, SCENE_W, 14);
+  box(GColorGreen, 0, 14, SCENE_W, 7);
+  box(GColorRajah, 0, 18, SCENE_W, 3);
+  box(GColorYellow, 3, 2, 3, 3);
+  cloud(9, 4, 12);
+  // tree
+  box(GColorWindsorTan, 25, 9, 2, 6);
+  box(GColorIslamicGreen, 22, 3, 8, 7);
+  box(GColorIslamicGreen, 23, 2, 6, 1);
+  px(24, 5, GColorRed);
+  px(27, 7, GColorRed);
+  // flowers
+  static const GColor fl[6] = {GColorRed, GColorYellow, GColorShockingPink,
+                               GColorWhite, GColorRed, GColorYellow};
+  static const int fx[6] = {1, 9, 20, 28, 15, 5};
+  static const int fy[6] = {16, 15, 17, 16, 14, 14};
+  for (int i = 0; i < 6; i++) px(fx[i], fy[i], fl[i]);
+  // butterfly
+  int bx = 4 + (int)(s_tick % 14) * 2;
+  int by = 6 + (int)((s_tick / 2) % 2);
+  cbox(GColorMagenta, bx, by, 1, 1);
+  cbox(GColorShockingPink, bx - 1, by - 1, 1, 1);
+  cbox(GColorShockingPink, bx + 1, by - 1, 1, 1);
+  // pet out for a walk with a kid in tow
+  s_bob = 1;
+  pet(14, 10, (s_tick % 7) == 0, 0);
+  s_bob = 0;
+  kid(6, 13 + (int)((s_tick + 1) & 1), GColorCyan, true);
+}
+
 static void table_scene(bool family) {
   room(GColorPastelYellow, GColorRajah);
   int mouth = (s_tick & 1);
@@ -442,15 +657,26 @@ static void health_handler(HealthEventType event, void *context) {
 
 // ------------------------------------------------------------- activities
 
-static Activity pick_activity(int hour, int wday) {
+static Activity pick_activity(int hour, int min, int wday) {
   bool weekend = (wday == 0 || wday == 6);
   if (hour < 7 || hour >= 22) return ACT_SLEEP;
-  if (hour < 9) return ACT_WAKE;
+  if (hour == 7) return (min < 30) ? ACT_WAKE : ACT_BRUSH;
+  if (hour == 20) return ACT_BATH;
+  if (hour == 21) return ACT_READ;
+  if (weekend) {
+    if (hour == 8 || hour == 12) return ACT_LUNCH;     // breakfast / lunch
+    if (hour <= 11) return ACT_WALK;
+    if (hour <= 14) return ACT_CHILL;
+    if (hour <= 16) return ACT_GAME;
+    if (hour == 18) return ACT_DINNER;
+    return ACT_PLAY;
+  }
+  if (hour == 8) return ACT_COMMUTE;
   if (hour == 12) return ACT_LUNCH;
-  if (hour == 17) return ACT_DINNER;
-  if (hour >= 18) return ACT_PLAY;
-  // 9-11, 13-16
-  if (weekend) return (hour >= 13) ? ACT_CHILL : ACT_PLAY;
+  if (hour == 17) return ACT_COMMUTE;
+  if (hour == 18) return ACT_DINNER;
+  if (hour >= 19) return ACT_PLAY;
+  if ((hour == 11 || hour == 15) && min < 30) return ACT_MEETING;
   return ACT_CODE;
 }
 
@@ -488,7 +714,8 @@ static void canvas_update(Layer *layer, GContext *ctx) {
   graphics_fill_rect(ctx, GRect(OX - U, OY - U, (SCENE_W + 2) * U, (SCENE_H + 2) * U),
                      3 * U, GCornersAll);
 
-  switch (pick_activity(s_hour, s_wday)) {
+  s_bob = 0;
+  switch (pick_activity(s_hour, s_min, s_wday)) {
     case ACT_SLEEP:  scene_sleep();       break;
     case ACT_WAKE:   scene_wake();        break;
     case ACT_CODE:   scene_code();        break;
@@ -496,6 +723,13 @@ static void canvas_update(Layer *layer, GContext *ctx) {
     case ACT_DINNER: table_scene(true);   break;
     case ACT_PLAY:   scene_play();        break;
     case ACT_CHILL:  scene_chill();       break;
+    case ACT_BRUSH:  scene_brush();       break;
+    case ACT_COMMUTE: scene_commute();    break;
+    case ACT_MEETING: scene_meeting();    break;
+    case ACT_GAME:   scene_game();        break;
+    case ACT_BATH:   scene_bath();        break;
+    case ACT_READ:   scene_read();        break;
+    case ACT_WALK:   scene_walk();        break;
   }
 
   // date
