@@ -60,30 +60,98 @@ static void heart_px(GColor c, int x, int y) {
   box(c, x + 1, y + 2, 1, 1);
 }
 
-// Pet palette: a soft pink blob with a deeper pink outline.
-#define PET_BODY GColorMelon
-#define PET_OUT  GColorShockingPink
+// ------------------------------------------------------------- pet species
+// Flick your wrist (tap) to cycle through the pets; the choice is saved.
+
+typedef enum { EARS_NUB, EARS_CAT, EARS_BUNNY, EARS_BEAR, EARS_FROG } EarStyle;
+#define NUM_SPECIES 5
+#define PERSIST_SPECIES 1
+
+typedef struct {
+  GColor body, out, blush, snout;
+  EarStyle ears;
+} Species;
+
+static Species s_sp;
+static int s_species;
+
+static void load_species(int id) {
+  switch (id) {
+    default:
+    case 0:  // blob: pink blob
+      s_sp = (Species){GColorMelon, GColorShockingPink, GColorRed, GColorMelon, EARS_NUB};
+      break;
+    case 1:  // cat: orange tabby
+      s_sp = (Species){GColorRajah, GColorOrange, GColorShockingPink, GColorRajah, EARS_CAT};
+      break;
+    case 2:  // bunny: white with long ears
+      s_sp = (Species){GColorWhite, GColorLightGray, GColorShockingPink, GColorWhite, EARS_BUNNY};
+      break;
+    case 3:  // bear: brown with a creamy snout
+      s_sp = (Species){GColorWindsorTan, GColorBulgarianRose, GColorMelon, GColorRajah, EARS_BEAR};
+      break;
+    case 4:  // frog: green with eye bumps and a wide grin
+      s_sp = (Species){GColorGreen, GColorIslamicGreen, GColorShockingPink, GColorGreen, EARS_FROG};
+      break;
+  }
+}
+
+#define PET_BODY (s_sp.body)
+#define PET_OUT  (s_sp.out)
 
 static int s_bob;   // 1 = pet is standing and hops on odd frames
 
 static void px(int x, int y, GColor c) { box(c, x, y, 1, 1); }
 
-// The grown-up pet: 8 wide, 8 tall (plus ear nubs one row above).
+// The grown-up pet: 8 wide, 8 tall plus ears/extras around it.
 // mouth: 0 = closed, 1 = open (chewing / talking)
 static void pet(int x, int y, bool blink, int mouth) {
   if (s_bob && (s_tick & 1)) y -= 1;               // little hop
-  // ear nubs
-  px(x + 1, y - 1, PET_OUT);
-  px(x + 6, y - 1, PET_OUT);
+  GColor out = s_sp.out, body = s_sp.body;
+  // ears / bumps (drawn first so the head overlaps them)
+  switch (s_sp.ears) {
+    case EARS_CAT:
+      box(out, x + 1, y - 1, 2, 1);  px(x + 1, y - 2, out);
+      box(out, x + 5, y - 1, 2, 1);  px(x + 6, y - 2, out);
+      break;
+    case EARS_BUNNY:
+      box(out, x + 1, y - 3, 2, 3);  px(x + 2, y - 2, s_sp.blush);
+      box(out, x + 5, y - 3, 2, 3);  px(x + 5, y - 2, s_sp.blush);
+      break;
+    case EARS_BEAR:
+      box(out, x, y - 1, 2, 2);
+      box(out, x + 6, y - 1, 2, 2);
+      break;
+    case EARS_FROG:
+      box(out, x + 1, y - 1, 2, 1);
+      box(out, x + 5, y - 1, 2, 1);
+      break;
+    default:
+      px(x + 1, y - 1, out);
+      px(x + 6, y - 1, out);
+      break;
+  }
   // body: outline, then fill
-  box(PET_OUT, x + 1, y, 6, 1);
-  box(PET_OUT, x, y + 1, 8, 5);
-  box(PET_OUT, x + 1, y + 6, 6, 1);
-  box(PET_BODY, x + 1, y + 1, 6, 5);
-  box(PET_BODY, x + 2, y + 6, 4, 1);
+  box(out, x + 1, y, 6, 1);
+  box(out, x, y + 1, 8, 5);
+  box(out, x + 1, y + 6, 6, 1);
+  box(body, x + 1, y + 1, 6, 5);
+  box(body, x + 2, y + 6, 4, 1);
   // feet
-  box(PET_OUT, x + 1, y + 7, 2, 1);
-  box(PET_OUT, x + 5, y + 7, 2, 1);
+  box(out, x + 1, y + 7, 2, 1);
+  box(out, x + 5, y + 7, 2, 1);
+  // extras: whiskers + wagging tail, bunny pom-pom, bear snout
+  if (s_sp.ears == EARS_CAT) {
+    px(x - 1, y + 3, GColorDarkGray);  px(x - 1, y + 5, GColorDarkGray);
+    px(x + 8, y + 3, GColorDarkGray);  px(x + 8, y + 5, GColorDarkGray);
+    box(out, x + 8, y + 6, 1, 2);
+    px(x + 9, y + 5 + (int)(s_tick & 1), out);
+  } else if (s_sp.ears == EARS_BUNNY) {
+    px(x - 1, y + 6, GColorWhite);
+    px(x - 1, y + 5, GColorWhite);
+  } else if (s_sp.ears == EARS_BEAR) {
+    box(s_sp.snout, x + 2, y + 4, 4, 2);
+  }
   // big shiny eyes (2x2 each) or sleepy blink
   if (blink) {
     box(GColorBlack, x + 1, y + 3, 2, 1);
@@ -100,8 +168,10 @@ static void pet(int x, int y, bool blink, int mouth) {
     px(x + 5, y + 2, GColorWhite);
   }
   // blush
-  px(x + 1, y + 4, GColorRed);
-  px(x + 6, y + 4, GColorRed);
+  if (s_sp.ears != EARS_BEAR) {
+    px(x + 1, y + 4, s_sp.blush);
+    px(x + 6, y + 4, s_sp.blush);
+  }
   // mouth
   if (mouth) {
     box(GColorRed, x + 3, y + 4, 2, 2);
@@ -113,21 +183,24 @@ static void pet(int x, int y, bool blink, int mouth) {
     px(x + 2, y + 4, GColorBlack);                 // big smile
     px(x + 5, y + 4, GColorBlack);
     box(GColorBlack, x + 3, y + 5, 2, 1);
+  } else if (s_sp.ears == EARS_FROG) {
+    box(GColorBlack, x + 2, y + 5, 4, 1);          // wide froggy grin
   } else {
-    px(x + 3, y + 4, GColorBlack);                 // tiny "w" mouth
+    px(x + 3, y + 4, GColorBlack);                 // tiny "w" mouth / nose
     px(x + 4, y + 4, GColorBlack);
   }
   if (s_mood == MOOD_SAD) {
     box(GColorPictonBlue, x + 2, y + 4, 1, 1 + (int)(s_tick & 1));   // tear
     // little rain cloud overhead
-    box(GColorLightGray, x + 1, y - 4, 6, 2);
-    box(GColorLightGray, x + 2, y - 5, 3, 1);
-    px(x + 2 + 2 * (int)(s_tick & 1), y - 2, GColorPictonBlue);
-    px(x + 5 - 2 * (int)(s_tick & 1), y - 2, GColorPictonBlue);
+    int cy = y - (s_sp.ears == EARS_BUNNY ? 7 : 4);
+    box(GColorLightGray, x + 1, cy, 6, 2);
+    box(GColorLightGray, x + 2, cy - 1, 3, 1);
+    px(x + 2 + 2 * (int)(s_tick & 1), cy + 2, GColorPictonBlue);
+    px(x + 5 - 2 * (int)(s_tick & 1), cy + 2, GColorPictonBlue);
   } else if (s_mood == MOOD_HAPPY) {
     // twinkling sparkles
-    int sx = (s_tick & 1) ? x + 7 : x;
-    int sy = y - 5;
+    int sx = (s_tick & 1) ? x + 8 : x - 1;
+    int sy = y - (s_sp.ears == EARS_BUNNY ? 6 : 5);
     box(GColorYellow, sx, sy, 1, 3);
     box(GColorYellow, sx - 1, sy + 1, 3, 1);
     px(sx, sy + 1, GColorWhite);
@@ -149,6 +222,13 @@ static void kid(int x, int y, GColor c, bool happy) {
   } else {
     px(x + 2, y + 2, GColorBlack);
   }
+}
+
+// A small cloud drifting across a window (x0..x0+w-1 at row y0).
+static void cloud(int x0, int y0, int w) {
+  int cx = x0 + (int)((s_tick / 3) % (uint32_t)(w - 1));
+  box(GColorWhite, cx, y0, 2, 1);
+  px(cx + 1, y0 - 1, GColorWhite);
 }
 
 static void room(GColor wall, GColor floor_c) {
@@ -198,6 +278,7 @@ static void scene_wake(void) {
   box(GColorWhite, 2, 2, 9, 9);
   box(GColorCeleste, 3, 3, 7, 7);
   box(GColorYellow, 5, 5, 3, 3);
+  cloud(3, 4, 7);
   box(GColorWhite, 6, 2, 1, 9);
   // stretching pet
   int pxx = 14, pyy = 10;
@@ -260,6 +341,7 @@ static void table_scene(bool family) {
   // window
   box(GColorWhite, 12, 2, 8, 7);
   box(GColorCeleste, 13, 3, 6, 5);
+  cloud(13, 5, 5);
   pet(2, 7, (s_tick % 7) == 0, mouth);
   if (family) {
     kid(19, 11, GColorCyan, mouth);
@@ -273,6 +355,7 @@ static void table_scene(bool family) {
   box(GColorWhite, 11, 13, 5, 1);
   box(GColorChromeYellow, 12, 11, 3, 1);          // bun
   box(GColorWindsorTan, 12, 12, 3, 1);            // patty
+  px(13, 10 - (int)(s_tick & 1), GColorLightGray);  // steam
   if (family) {
     box(GColorWhite, 19, 13, 4, 1);
     box(GColorRed, 20, 12, 2, 1);
@@ -284,8 +367,9 @@ static void table_scene(bool family) {
 static void scene_play(void) {
   room(GColorMintGreen, GColorRajah);
   // window
-  box(GColorWhite, 2, 2, 8, 7);
-  box(GColorCeleste, 3, 3, 6, 5);
+  box(GColorWhite, 12, 2, 8, 7);
+  box(GColorCeleste, 13, 3, 6, 5);
+  cloud(13, 5, 5);
   // family
   s_bob = 1;
   pet(2, 10, (s_tick % 7) == 0, 0);
@@ -303,7 +387,7 @@ static void scene_play(void) {
   int rise = (s_tick / 2) % 3;
   heart_px(GColorShockingPink, 22, 7 - rise);
   if (rise == 2) {
-    heart_px(GColorMelon, 14, 4);
+    heart_px(GColorMelon, 6, 3);
   }
 }
 
@@ -467,6 +551,13 @@ static void tick_handler(struct tm *tick_time, TimeUnits units_changed) {
   layer_mark_dirty(s_canvas);
 }
 
+static void tap_handler(AccelAxisType axis, int32_t direction) {
+  s_species = (s_species + 1) % NUM_SPECIES;
+  load_species(s_species);
+  persist_write_int(PERSIST_SPECIES, s_species);
+  layer_mark_dirty(s_canvas);
+}
+
 static void battery_handler(BatteryChargeState state) {
   s_batt = state.charge_percent;
   layer_mark_dirty(s_canvas);
@@ -492,6 +583,8 @@ static void init(void) {
   });
   window_stack_push(s_window, true);
 
+  s_species = persist_exists(PERSIST_SPECIES) ? persist_read_int(PERSIST_SPECIES) % NUM_SPECIES : 0;
+  load_species(s_species);
   update_time();
   update_steps();
   s_batt = battery_state_service_peek().charge_percent;
@@ -499,6 +592,7 @@ static void init(void) {
   // One tick per second drives the 1 fps "Tamagotchi" animation.
   tick_timer_service_subscribe(SECOND_UNIT, tick_handler);
   battery_state_service_subscribe(battery_handler);
+  accel_tap_service_subscribe(tap_handler);
 #if defined(PBL_HEALTH)
   health_service_events_subscribe(health_handler, NULL);
 #endif
@@ -507,6 +601,7 @@ static void init(void) {
 static void deinit(void) {
   tick_timer_service_unsubscribe();
   battery_state_service_unsubscribe();
+  accel_tap_service_unsubscribe();
 #if defined(PBL_HEALTH)
   health_service_events_unsubscribe();
 #endif

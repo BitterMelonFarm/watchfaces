@@ -1,4 +1,4 @@
-// Renders main.c's scenes to raw frames: ./render <hour> <wday> <min> <steps> <batt> <tick> > frame.bin
+// Renders main.c's scenes to raw frames: ./render <hour> <wday> <min> <steps> <batt> <tick> [species] > frame.bin
 #include "pebble.h"
 #define main app_main
 #include "../../src/c/main.c"
@@ -41,6 +41,11 @@ void tick_timer_service_unsubscribe(void) {}
 void battery_state_service_subscribe(void (*h)(BatteryChargeState)) {}
 void battery_state_service_unsubscribe(void) {}
 void app_event_loop(void) {}
+void accel_tap_service_subscribe(AccelTapHandler h) {}
+void accel_tap_service_unsubscribe(void) {}
+bool persist_exists(uint32_t k) { return false; }
+int32_t persist_read_int(uint32_t k) { return 0; }
+int persist_write_int(uint32_t k, int32_t v) { return 4; }
 HealthServiceAccessibilityMask health_service_metric_accessible(HealthMetric m, time_t a, time_t b) { return HealthServiceAccessibilityMaskAvailable; }
 uint32_t health_service_sum_today(HealthMetric m) { return g_steps; }
 time_t time_start_of_today(void) { return 0; }
@@ -53,6 +58,8 @@ int main(int argc, char **argv) {
   g_steps = atoi(argv[4]); s_batt = atoi(argv[5]); s_tick = atoi(argv[6]);
   snprintf(s_time_buf, sizeof s_time_buf, "%02d:%02d", s_hour, s_min);
   snprintf(s_date_buf, sizeof s_date_buf, "%s Nov 2", (const char *[]){"Sun","Mon","Tue","Wed","Thu","Fri","Sat"}[s_wday]);
+  if (argc > 7) load_species(atoi(argv[7]));
+  else load_species(0);
   update_steps();
   canvas_update(NULL, NULL);
   fwrite(fb, 1, sizeof fb, stdout);

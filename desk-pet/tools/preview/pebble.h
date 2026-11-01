@@ -97,3 +97,11 @@ uint32_t health_service_sum_today(HealthMetric);
 time_t time_start_of_today(void);
 void health_service_events_subscribe(HealthEventHandler, void *);
 void health_service_events_unsubscribe(void);
+
+typedef enum { ACCEL_AXIS_X, ACCEL_AXIS_Y, ACCEL_AXIS_Z } AccelAxisType;
+typedef void (*AccelTapHandler)(AccelAxisType, int32_t);
+void accel_tap_service_subscribe(AccelTapHandler);
+void accel_tap_service_unsubscribe(void);
+bool persist_exists(uint32_t);
+int32_t persist_read_int(uint32_t);
+int persist_write_int(uint32_t, int32_t);

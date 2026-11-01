@@ -21,8 +21,8 @@ def fnt(name):
             return ImageFont.truetype(p, int(size * .8))
     return ImageFont.load_default()
 
-def frame(name, hour, wday, minute=9, steps=3000, batt=80, tick=0):
-    r = subprocess.run([exe, *map(str, (hour, wday, minute, steps, batt, tick))], capture_output=True, check=True)
+def frame(name, hour, wday, minute=9, steps=3000, batt=80, tick=0, species=0):
+    r = subprocess.run([exe, *map(str, (hour, wday, minute, steps, batt, tick, species))], capture_output=True, check=True)
     im = Image.new("RGB", (260, 260))
     px = im.load()
     for y in range(260):
@@ -56,4 +56,15 @@ sheet = Image.new("RGB", (260 * 3, 260 * 3))
 for i, im in enumerate(ims):
     sheet.paste(im, ((i % 3) * 260, (i // 3) * 260))
 sheet.save(os.path.join(out, "sheet.png"))
+# One row per species: code, play, sad-at-desk, happy.
+NAMES = ["blob", "cat", "bunny", "bear", "frog"]
+rows = []
+for sp, n in enumerate(NAMES):
+    rows.append([frame(f"{n}_code", 10, 2, 9, 3000, 80, 2, sp), frame(f"{n}_play", 19, 2, 0, 5000, 80, 5, sp),
+                 frame(f"{n}_sad", 15, 2, 0, 400, 80, 3, sp), frame(f"{n}_happy", 20, 2, 0, 8500, 80, 1, sp)])
+pets = Image.new("RGB", (260 * 4, 260 * 5))
+for r_i, row in enumerate(rows):
+    for c_i, im in enumerate(row):
+        pets.paste(im, (c_i * 260, r_i * 260))
+pets.save(os.path.join(out, "pets.png"))
 print("wrote", out)

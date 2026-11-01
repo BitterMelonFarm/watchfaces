@@ -27,6 +27,12 @@ pebble build
 pebble install --emulator gabbro
 ```
 
+### Pets
+
+Five pets: blob (pink), cat (orange tabby with whiskers and a wagging tail), bunny, bear and frog. **Flick your wrist (tap) to switch pet**; the choice is saved. Rows below are blob, cat, bunny, bear, frog.
+
+![pets](desk-pet/docs/pets.png)
+
 ### Status
 
 - `pebble build` succeeds for `gabbro` against SDK 4.33.1 (no code warnings).
