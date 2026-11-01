@@ -27,4 +27,14 @@ pebble build
 pebble install --emulator gabbro
 ```
 
-**Status:** written without SDK access (network-blocked); only syntax-checked against a stub header. Not yet built or run in the emulator.
+### Status
+
+- `pebble build` succeeds for `gabbro` against SDK 4.33.1 (no code warnings).
+- The Pebble emulator (QEMU + pypkjs) boots the gabbro firmware in the cloud sandbox but never answers the protocol, so the face has **not** been run in the real emulator or on a watch.
+- `desk-pet/tools/preview/render.py` compiles the real `main.c` against a stub Pebble API and draws every scene to PNG (stand-in font, no firmware). Output: `desk-pet/docs/preview.png`.
+
+```sh
+python3 desk-pet/tools/preview/render.py /tmp/preview   # needs gcc + Pillow
+```
+
+![preview](desk-pet/docs/preview.png)
