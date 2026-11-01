@@ -49,11 +49,11 @@ SCENES = [
     ("sleep", 23, 2, 30, 3000, 80, 3), ("wake", 7, 2, 40, 100, 80, 0),
     ("code", 10, 2, 9, 3000, 80, 2), ("lunch", 12, 2, 15, 3500, 60, 1),
     ("dinner", 17, 2, 30, 6000, 40, 1), ("play", 19, 2, 0, 8200, 20, 5),
-    ("chill", 14, 0, 0, 3000, 80, 4), ("code_sad", 15, 2, 0, 400, 80, 2),
+    ("chill", 14, 0, 0, 3000, 80, 4), ("code_sad", 15, 2, 0, 400, 80, 2), ("happy", 20, 2, 0, 8500, 100, 1),
 ]
 ims = [frame(*s) for s in SCENES]
-sheet = Image.new("RGB", (260 * 4, 260 * 2))
+sheet = Image.new("RGB", (260 * 3, 260 * 3))
 for i, im in enumerate(ims):
-    sheet.paste(im, ((i % 4) * 260, (i // 4) * 260))
+    sheet.paste(im, ((i % 3) * 260, (i // 3) * 260))
 sheet.save(os.path.join(out, "sheet.png"))
 print("wrote", out)

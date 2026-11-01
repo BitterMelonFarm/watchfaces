@@ -16,7 +16,7 @@ typedef enum {
 } Activity;
 
 #define SCENE_W 32
-#define SCENE_H 24
+#define SCENE_H 21
 #define FLOOR_Y 18
 #define STEP_GOAL 8000
 
@@ -92,7 +92,19 @@ static void pet(int x, int y, bool blink, int mouth) {
     box(GColorBlack, x + 3, y + 5, 2, 1);
   }
   if (s_mood == MOOD_SAD) {
-    box(GColorPictonBlue, x + 2, y + 4 + (int)(s_tick & 1), 1, 1);   // tear
+    box(GColorPictonBlue, x + 2, y + 4, 1, 1 + (int)(s_tick & 1));   // tear
+    // little rain cloud overhead
+    box(GColorLightGray, x + 1, y - 3, 6, 2);
+    box(GColorLightGray, x + 2, y - 4, 3, 1);
+    box(GColorPictonBlue, x + 2 + 2 * (int)(s_tick & 1), y - 1, 1, 1);
+    box(GColorPictonBlue, x + 5 - 2 * (int)(s_tick & 1), y - 1, 1, 1);
+  } else if (s_mood == MOOD_HAPPY) {
+    // twinkling sparkles
+    int sx = (s_tick & 1) ? x + 6 : x;
+    int sy = y - 4;
+    box(GColorYellow, sx, sy, 1, 3);
+    box(GColorYellow, sx - 1, sy + 1, 3, 1);
+    box(GColorWhite, sx, sy + 1, 1, 1);
   }
 }
 
@@ -167,38 +179,38 @@ static void scene_wake(void) {
 static void scene_code(void) {
   room(GColorBabyBlueEyes, GColorDarkGray);
   // plant
-  box(GColorIslamicGreen, 28, 10, 3, 6);
-  box(GColorWindsorTan, 28, 16, 3, 2);
-  // chair
-  box(GColorBulgarianRose, 0, 9, 1, 7);
-  box(GColorBulgarianRose, 1, 15, 8, 1);
-  box(GColorDarkGray, 4, 16, 1, 3);
-  box(GColorBlack, 2, 19, 6, 1);
+  box(GColorIslamicGreen, 29, 10, 3, 6);
+  box(GColorWindsorTan, 29, 16, 3, 2);
+  // chair (back visible behind the pet)
+  box(GColorBulgarianRose, 1, 8, 2, 8);
+  box(GColorBulgarianRose, 2, 15, 8, 1);
+  box(GColorDarkGray, 5, 16, 1, 3);
+  box(GColorBlack, 3, 19, 6, 1);
   // pet sitting at the desk
-  pet(1, 7, (s_tick % 7) == 0, 0);
+  pet(2, 7, (s_tick % 7) == 0, 0);
   // monitor
-  box(GColorDarkGray, 16, 12, 3, 2);
-  box(GColorDarkGray, 11, 4, 13, 9);
-  box(GColorBlack, 12, 5, 11, 7);
+  box(GColorDarkGray, 17, 12, 3, 2);
+  box(GColorDarkGray, 12, 4, 13, 9);
+  box(GColorBlack, 13, 5, 11, 7);
   static const GColor code_cols[3] = {GColorGreen, GColorCyan, GColorYellow};
   for (int i = 0; i < 3; i++) {
     int w = 2 + ((s_tick / 2 + i * 3) % 5);
-    int x = 13 + ((i + s_tick / 6) % 3);
+    int x = 14 + ((i + s_tick / 6) % 3);
     box(code_cols[i], x, 6 + i * 2, w, 1);
   }
   if (s_tick & 1) {
-    box(GColorWhite, 13, 11, 1, 1);               // blinking cursor
+    box(GColorWhite, 14, 11, 1, 1);               // blinking cursor
   }
   // desk, keyboard, typing hands
-  box(GColorLightGray, 12, 13, 8, 1);
-  box(GColorOrange, 8, 12 + (s_tick & 1), 3, 1);
-  box(GColorWindsorTan, 8, 14, 20, 2);
-  box(GColorWindsorTan, 9, 16, 2, 4);
-  box(GColorWindsorTan, 25, 16, 2, 4);
+  box(GColorLightGray, 13, 13, 8, 1);
+  box(GColorOrange, 10, 12 + (s_tick & 1), 3, 1);
+  box(GColorWindsorTan, 10, 14, 19, 2);
+  box(GColorWindsorTan, 11, 16, 2, 4);
+  box(GColorWindsorTan, 26, 16, 2, 4);
   // coffee mug with steam
-  box(GColorWhite, 25, 12, 2, 2);
-  box(GColorWhite, 27, 12, 1, 1);
-  box(GColorLightGray, 25 + (s_tick & 1), 10, 1, 1);
+  box(GColorWhite, 26, 12, 2, 2);
+  box(GColorWhite, 28, 12, 1, 1);
+  box(GColorLightGray, 26 + (s_tick & 1), 10, 1, 1);
 }
 
 static void table_scene(bool family) {
@@ -340,10 +352,10 @@ static void canvas_update(Layer *layer, GContext *ctx) {
 
   // scene frame + scene
   g = ctx;
-  U = w / 52;
+  U = w / 43;
   if (U < 1) U = 1;
   OX = (w - SCENE_W * U) / 2;
-  OY = h * 78 / 260;
+  OY = h * 74 / 260;
 
   graphics_context_set_fill_color(ctx, GColorDarkGray);
   graphics_fill_rect(ctx, GRect(OX - U, OY - U, (SCENE_W + 2) * U, (SCENE_H + 2) * U),
@@ -362,12 +374,12 @@ static void canvas_update(Layer *layer, GContext *ctx) {
   // date
   graphics_context_set_text_color(ctx, GColorLightGray);
   graphics_draw_text(ctx, s_date_buf, fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD),
-                     GRect(0, h * 205 / 260, w, h * 22 / 260),
+                     GRect(0, h * 208 / 260, w, h * 22 / 260),
                      GTextOverflowModeFill, GTextAlignmentCenter, NULL);
 
   // step meter: bar fills toward the daily goal, gold once reached
   int bw = w * 90 / 260, bh = h * 5 / 260;
-  int bx = (w - bw) / 2, by = h * 229 / 260;
+  int bx = (w - bw) / 2, by = h * 231 / 260;
   graphics_context_set_fill_color(ctx, GColorDarkGray);
   graphics_fill_rect(ctx, GRect(bx, by, bw, bh), 0, GCornerNone);
   int fill = s_steps >= STEP_GOAL ? bw : bw * s_steps / STEP_GOAL;
@@ -378,7 +390,7 @@ static void canvas_update(Layer *layer, GContext *ctx) {
   int hu = 3;
   int spacing = 14;
   int x0 = (w - (4 * spacing + 3 * hu)) / 2;
-  int y0 = h * 239 / 260;
+  int y0 = h * 241 / 260;
   int full = (s_batt + 19) / 20;
   for (int i = 0; i < 5; i++) {
     heart_raw(ctx, x0 + i * spacing, y0, hu,
