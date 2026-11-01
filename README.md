@@ -33,9 +33,13 @@ pebble install --emulator gabbro
 
 ### Pets
 
-Five pets: blob (pink), cat (orange tabby with whiskers and a wagging tail), bunny, bear and frog. **Flick your wrist (tap) to switch pet**; the choice is saved. Rows below are blob, cat, bunny, bear, frog.
+Nine pets: blob (pink), cat (orange tabby with whiskers and a wagging tail), bunny, bear and frog, plus four cute Lovecraftian ones: baby Cthulhu (flapping bat wings, wiggly tentacle beard), shoggoth (purple goo with too many blinking eyes), deep one (teal fish-person with crest, gills and tail fin) and the great eye (a floating eyeball with a shiny iris and dangling tendrils). **Flick your wrist (tap) to switch pet**; the choice is saved.
 
 ![pets](desk-pet/docs/pets.png)
+
+![eldritch pets](desk-pet/docs/eldritch.png)
+
+Rows (eldritch): cthulhu, shoggoth, deep one, great eye.
 
 ### Status
 

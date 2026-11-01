@@ -61,14 +61,15 @@ for i, im in enumerate(ims):
     sheet.paste(im, ((i % 4) * 260, (i // 4) * 260))
 sheet.save(os.path.join(out, "sheet.png"))
 # One row per species: code, play, sad-at-desk, happy.
-NAMES = ["blob", "cat", "bunny", "bear", "frog"]
+NAMES = ["blob", "cat", "bunny", "bear", "frog", "cthulhu", "shoggoth", "deepone", "eye"]
 rows = []
 for sp, n in enumerate(NAMES):
     rows.append([frame(f"{n}_code", 10, 2, 9, 3000, 80, 2, sp), frame(f"{n}_play", 19, 2, 0, 5000, 80, 5, sp),
                  frame(f"{n}_sad", 15, 2, 0, 400, 80, 3, sp), frame(f"{n}_happy", 20, 2, 0, 8500, 80, 1, sp)])
-pets = Image.new("RGB", (260 * 4, 260 * 5))
-for r_i, row in enumerate(rows):
-    for c_i, im in enumerate(row):
-        pets.paste(im, (c_i * 260, r_i * 260))
-pets.save(os.path.join(out, "pets.png"))
+for fname, sel in (("pets.png", rows[:5]), ("eldritch.png", rows[5:])):
+    sheet2 = Image.new("RGB", (260 * 4, 260 * len(sel)))
+    for r_i, row in enumerate(sel):
+        for c_i, im in enumerate(row):
+            sheet2.paste(im, (c_i * 260, r_i * 260))
+    sheet2.save(os.path.join(out, fname))
 print("wrote", out)

@@ -37,6 +37,11 @@ typedef struct { uint8_t argb; } GColor;
 #define GColorMagenta GC(3,0,3)
 #define GColorDarkCandyAppleRed GC(2,0,0)
 #define GColorPictonBlue GC(1,2,3)
+#define GColorMayGreen GC(1,2,1)
+#define GColorDarkGreen GC(0,1,0)
+#define GColorPurple GC(2,0,3)
+#define GColorIndigo GC(1,0,2)
+#define GColorTiffanyBlue GC(0,2,2)
 
 typedef struct { int x, y; } GPoint;
 typedef struct { int w, h; } GSize;

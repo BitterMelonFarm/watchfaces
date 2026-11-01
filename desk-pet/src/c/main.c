@@ -70,8 +70,11 @@ static void heart_px(GColor c, int x, int y) {
 // ------------------------------------------------------------- pet species
 // Flick your wrist (tap) to cycle through the pets; the choice is saved.
 
-typedef enum { EARS_NUB, EARS_CAT, EARS_BUNNY, EARS_BEAR, EARS_FROG } EarStyle;
-#define NUM_SPECIES 5
+typedef enum {
+  EARS_NUB, EARS_CAT, EARS_BUNNY, EARS_BEAR, EARS_FROG,
+  EARS_CTHULHU, EARS_SHOGGOTH, EARS_DEEP, EARS_EYE,
+} EarStyle;
+#define NUM_SPECIES 9
 #define PERSIST_SPECIES 1
 
 typedef struct {
@@ -100,6 +103,18 @@ static void load_species(int id) {
     case 4:  // frog: green with eye bumps and a wide grin
       s_sp = (Species){GColorGreen, GColorIslamicGreen, GColorShockingPink, GColorGreen, EARS_FROG};
       break;
+    case 5:  // baby Cthulhu: bat wings and a wiggly tentacle beard
+      s_sp = (Species){GColorMayGreen, GColorIslamicGreen, GColorMelon, GColorIndigo, EARS_CTHULHU};
+      break;
+    case 6:  // shoggoth: purple goo with too many eyes
+      s_sp = (Species){GColorPurple, GColorIndigo, GColorMagenta, GColorPurple, EARS_SHOGGOTH};
+      break;
+    case 7:  // deep one: teal fish-person with a crest, gills and tail fin
+      s_sp = (Species){GColorTiffanyBlue, GColorCobaltBlue, GColorShockingPink, GColorTiffanyBlue, EARS_DEEP};
+      break;
+    case 8:  // great eye: a floating eyeball on tentacles
+      s_sp = (Species){GColorWhite, GColorLightGray, GColorRed, GColorWhite, EARS_EYE};
+      break;
   }
 }
 
@@ -114,6 +129,7 @@ static void px(int x, int y, GColor c) { box(c, x, y, 1, 1); }
 // mouth: 0 = closed, 1 = open (chewing / talking)
 static void pet(int x, int y, bool blink, int mouth) {
   if (s_bob && (s_tick & 1)) y -= 1;               // little hop
+  if (s_sp.ears == EARS_EYE && (s_tick & 2)) y -= 1;   // the eye bobs in the air
   GColor out = s_sp.out, body = s_sp.body;
   // ears / bumps (drawn first so the head overlaps them)
   switch (s_sp.ears) {
@@ -133,6 +149,28 @@ static void pet(int x, int y, bool blink, int mouth) {
       box(out, x + 1, y - 1, 2, 1);
       box(out, x + 5, y - 1, 2, 1);
       break;
+    case EARS_CTHULHU: {
+      int fl = (int)(s_tick & 1);                      // flapping bat wings
+      box(s_sp.snout, x - 2, y + 1 + fl, 2, 3);      // wings use the 'snout' colour
+      box(s_sp.snout, x + 8, y + 1 + fl, 2, 3);
+      px(x - 1, y + fl, s_sp.snout);
+      px(x + 8, y + fl, s_sp.snout);
+      px(x + 2, y - 1, out);                           // tiny horns
+      px(x + 5, y - 1, out);
+      break;
+    }
+    case EARS_SHOGGOTH:
+      box(out, x + 2, y - 1, 2, 1);                    // goo lumps
+      px(x + 5, y - 1, out);
+      px(x + 6, y - 2 + (int)(s_tick & 1), out);
+      break;
+    case EARS_DEEP:
+      px(x + 2, y - 1, out);                           // dorsal crest
+      box(out, x + 3, y - 2, 2, 1);
+      px(x + 5, y - 1, out);
+      break;
+    case EARS_EYE:
+      break;
     default:
       px(x + 1, y - 1, out);
       px(x + 6, y - 1, out);
@@ -144,9 +182,21 @@ static void pet(int x, int y, bool blink, int mouth) {
   box(out, x + 1, y + 6, 6, 1);
   box(body, x + 1, y + 1, 6, 5);
   box(body, x + 2, y + 6, 4, 1);
-  // feet
-  box(out, x + 1, y + 7, 2, 1);
-  box(out, x + 5, y + 7, 2, 1);
+  // feet (the eldritch ones get tentacles/drips instead)
+  if (s_sp.ears < EARS_CTHULHU || s_sp.ears == EARS_DEEP) {
+    box(out, x + 1, y + 7, 2, 1);
+    box(out, x + 5, y + 7, 2, 1);
+  } else if (s_sp.ears == EARS_SHOGGOTH) {
+    for (int i = 1; i <= 6; i++) {
+      if (((int)s_tick + i) % 3 != 0) px(x + i, y + 7, out);   // dripping goo
+    }
+  } else if (s_sp.ears == EARS_EYE) {
+    static const int tx[4] = {1, 3, 4, 6};
+    for (int i = 0; i < 4; i++) {
+      if (((int)s_tick + i) & 1) px(x + tx[i], y + 7, out);    // dangling tendrils
+      px(x + tx[i], y + 6, out);
+    }
+  }
   // extras: whiskers + wagging tail, bunny pom-pom, bear snout
   if (s_sp.ears == EARS_CAT) {
     px(x - 1, y + 3, GColorDarkGray);  px(x - 1, y + 5, GColorDarkGray);
@@ -158,9 +208,39 @@ static void pet(int x, int y, bool blink, int mouth) {
     px(x - 1, y + 5, GColorWhite);
   } else if (s_sp.ears == EARS_BEAR) {
     box(s_sp.snout, x + 2, y + 4, 4, 2);
+  } else if (s_sp.ears == EARS_SHOGGOTH) {
+    // extra eyes blinking all over the goo
+    if (((int)s_tick + 0) % 4 != 0) px(x + 3, y + 1, GColorYellow);
+    if (((int)s_tick + 1) % 4 != 0) px(x + 6, y + 1, GColorGreen);
+    if (((int)s_tick + 2) % 4 != 0) px(x, y + 3, GColorYellow);
+    if (((int)s_tick + 3) % 4 != 0) px(x + 7, y + 4, GColorGreen);
+    if (((int)s_tick + 1) % 5 != 0) px(x + 4, y + 6, GColorYellow);
+  } else if (s_sp.ears == EARS_DEEP) {
+    // tail fin on the right and gill slits on the cheeks
+    box(out, x + 8, y + 5, 1, 3);
+    px(x + 9, y + 4, out);
+    px(x + 9, y + 7, out);
+    px(x + 8, y + 3, out);
   }
   // big shiny eyes (2x2 each) or sleepy blink
-  if (blink) {
+  if (s_sp.ears == EARS_EYE) {
+    // one giant eyeball: iris, slit pupil, shine; blinks with an eyelid
+    if (blink) {
+      box(body, x + 2, y + 2, 4, 3);
+      box(GColorBlack, x + 2, y + 4, 4, 1);
+    } else {
+      box(GColorMagenta, x + 2, y + 2, 4, 4);
+      box(GColorBlack, x + 3, y + 2, 2, 4);
+      px(x + 2, y + 2, GColorWhite);
+      px(x + 3 + (int)((s_tick / 3) % 2), y + 3, GColorWhite);
+    }
+  } else if (s_sp.ears == EARS_DEEP && !blink && s_mood != MOOD_HAPPY) {
+    // big bulging fish eyes looking to the side
+    box(GColorWhite, x + 1, y + 2, 2, 2);
+    box(GColorWhite, x + 5, y + 2, 2, 2);
+    px(x + 2, y + 3, GColorBlack);
+    px(x + 6, y + 3, GColorBlack);
+  } else if (blink) {
     box(GColorBlack, x + 1, y + 3, 2, 1);
     box(GColorBlack, x + 5, y + 3, 2, 1);
   } else if (s_mood == MOOD_HAPPY) {
@@ -175,12 +255,23 @@ static void pet(int x, int y, bool blink, int mouth) {
     px(x + 5, y + 2, GColorWhite);
   }
   // blush
-  if (s_sp.ears != EARS_BEAR) {
+  if (s_sp.ears == EARS_EYE) {
+    px(x + 1, y + 2, GColorRed);                    // bloodshot veins
+    px(x + 6, y + 5, GColorRed);
+    px(x + 1, y + 5, GColorMelon);
+  } else if (s_sp.ears == EARS_DEEP) {
+    px(x + 1, y + 4, out);                          // gill slits
+    px(x + 1, y + 5, out);
+    px(x + 6, y + 4, out);
+    px(x + 6, y + 5, out);
+  } else if (s_sp.ears != EARS_BEAR) {
     px(x + 1, y + 4, s_sp.blush);
     px(x + 6, y + 4, s_sp.blush);
   }
   // mouth
-  if (mouth) {
+  if (s_sp.ears == EARS_EYE) {
+    // an eyeball has no mouth
+  } else if (mouth) {
     box(GColorRed, x + 3, y + 4, 2, 2);
   } else if (s_mood == MOOD_SAD) {
     box(GColorBlack, x + 3, y + 4, 2, 1);          // frown
@@ -192,9 +283,23 @@ static void pet(int x, int y, bool blink, int mouth) {
     box(GColorBlack, x + 3, y + 5, 2, 1);
   } else if (s_sp.ears == EARS_FROG) {
     box(GColorBlack, x + 2, y + 5, 4, 1);          // wide froggy grin
+  } else if (s_sp.ears == EARS_SHOGGOTH) {
+    box(GColorBlack, x + 2, y + 5, 4, 1);          // toothy grin
+    px(x + 3, y + 5, GColorWhite);
+    px(x + 5, y + 5, GColorWhite);
+  } else if (s_sp.ears == EARS_DEEP) {
+    box(GColorShockingPink, x + 3, y + 5, 2, 1);   // pouty fish lips
   } else {
     px(x + 3, y + 4, GColorBlack);                 // tiny "w" mouth / nose
     px(x + 4, y + 4, GColorBlack);
+  }
+  if (s_sp.ears == EARS_CTHULHU) {
+    // wiggling tentacle beard that also serves as feet
+    int w = (int)(s_tick & 1);
+    box(out, x + 2, y + 5, 1, 2 + w);
+    box(out, x + 3, y + 5, 1, 3 - w);
+    box(out, x + 4, y + 5, 1, 2 + w);
+    box(out, x + 5, y + 5, 1, 3 - w);
   }
   if (s_mood == MOOD_SAD) {
     box(GColorPictonBlue, x + 2, y + 4, 1, 1 + (int)(s_tick & 1));   // tear
