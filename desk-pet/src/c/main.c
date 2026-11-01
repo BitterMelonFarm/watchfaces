@@ -60,61 +60,94 @@ static void heart_px(GColor c, int x, int y) {
   box(c, x + 1, y + 2, 1, 1);
 }
 
-// The grown-up pet: 8 wide, 8 tall (including feet).
+// Pet palette: a soft pink blob with a deeper pink outline.
+#define PET_BODY GColorMelon
+#define PET_OUT  GColorShockingPink
+
+static int s_bob;   // 1 = pet is standing and hops on odd frames
+
+static void px(int x, int y, GColor c) { box(c, x, y, 1, 1); }
+
+// The grown-up pet: 8 wide, 8 tall (plus ear nubs one row above).
 // mouth: 0 = closed, 1 = open (chewing / talking)
 static void pet(int x, int y, bool blink, int mouth) {
-  GColor body = GColorOrange;
-  box(body, x + 1, y, 6, 1);
-  box(body, x, y + 1, 8, 5);
-  box(body, x + 1, y + 6, 6, 1);
-  box(GColorWindsorTan, x + 1, y + 7, 2, 1);
-  box(GColorWindsorTan, x + 5, y + 7, 2, 1);
+  if (s_bob && (s_tick & 1)) y -= 1;               // little hop
+  // ear nubs
+  px(x + 1, y - 1, PET_OUT);
+  px(x + 6, y - 1, PET_OUT);
+  // body: outline, then fill
+  box(PET_OUT, x + 1, y, 6, 1);
+  box(PET_OUT, x, y + 1, 8, 5);
+  box(PET_OUT, x + 1, y + 6, 6, 1);
+  box(PET_BODY, x + 1, y + 1, 6, 5);
+  box(PET_BODY, x + 2, y + 6, 4, 1);
+  // feet
+  box(PET_OUT, x + 1, y + 7, 2, 1);
+  box(PET_OUT, x + 5, y + 7, 2, 1);
+  // big shiny eyes (2x2 each) or sleepy blink
   if (blink) {
-    box(GColorBlack, x + 2, y + 3, 1, 1);
-    box(GColorBlack, x + 5, y + 3, 1, 1);
+    box(GColorBlack, x + 1, y + 3, 2, 1);
+    box(GColorBlack, x + 5, y + 3, 2, 1);
+  } else if (s_mood == MOOD_HAPPY) {
+    px(x + 1, y + 3, GColorBlack);                 // happy ^ ^ eyes
+    px(x + 2, y + 2, GColorBlack);
+    px(x + 5, y + 2, GColorBlack);
+    px(x + 6, y + 3, GColorBlack);
   } else {
-    box(GColorBlack, x + 2, y + 2, 1, 2);
-    box(GColorBlack, x + 5, y + 2, 1, 2);
+    box(GColorBlack, x + 1, y + 2, 2, 2);
+    box(GColorBlack, x + 5, y + 2, 2, 2);
+    px(x + 1, y + 2, GColorWhite);                 // eye shine
+    px(x + 5, y + 2, GColorWhite);
   }
-  box(GColorMelon, x + 1, y + 4, 1, 1);
-  box(GColorMelon, x + 6, y + 4, 1, 1);
+  // blush
+  px(x + 1, y + 4, GColorRed);
+  px(x + 6, y + 4, GColorRed);
+  // mouth
   if (mouth) {
     box(GColorRed, x + 3, y + 4, 2, 2);
   } else if (s_mood == MOOD_SAD) {
     box(GColorBlack, x + 3, y + 4, 2, 1);          // frown
-    box(GColorBlack, x + 2, y + 5, 1, 1);
-    box(GColorBlack, x + 5, y + 5, 1, 1);
+    px(x + 2, y + 5, GColorBlack);
+    px(x + 5, y + 5, GColorBlack);
   } else if (s_mood == MOOD_HAPPY) {
-    box(GColorBlack, x + 2, y + 4, 1, 1);          // smile
-    box(GColorBlack, x + 5, y + 4, 1, 1);
+    px(x + 2, y + 4, GColorBlack);                 // big smile
+    px(x + 5, y + 4, GColorBlack);
     box(GColorBlack, x + 3, y + 5, 2, 1);
   } else {
-    box(GColorBlack, x + 3, y + 5, 2, 1);
+    px(x + 3, y + 4, GColorBlack);                 // tiny "w" mouth
+    px(x + 4, y + 4, GColorBlack);
   }
   if (s_mood == MOOD_SAD) {
     box(GColorPictonBlue, x + 2, y + 4, 1, 1 + (int)(s_tick & 1));   // tear
     // little rain cloud overhead
-    box(GColorLightGray, x + 1, y - 3, 6, 2);
-    box(GColorLightGray, x + 2, y - 4, 3, 1);
-    box(GColorPictonBlue, x + 2 + 2 * (int)(s_tick & 1), y - 1, 1, 1);
-    box(GColorPictonBlue, x + 5 - 2 * (int)(s_tick & 1), y - 1, 1, 1);
+    box(GColorLightGray, x + 1, y - 4, 6, 2);
+    box(GColorLightGray, x + 2, y - 5, 3, 1);
+    px(x + 2 + 2 * (int)(s_tick & 1), y - 2, GColorPictonBlue);
+    px(x + 5 - 2 * (int)(s_tick & 1), y - 2, GColorPictonBlue);
   } else if (s_mood == MOOD_HAPPY) {
     // twinkling sparkles
-    int sx = (s_tick & 1) ? x + 6 : x;
-    int sy = y - 4;
+    int sx = (s_tick & 1) ? x + 7 : x;
+    int sy = y - 5;
     box(GColorYellow, sx, sy, 1, 3);
     box(GColorYellow, sx - 1, sy + 1, 3, 1);
-    box(GColorWhite, sx, sy + 1, 1, 1);
+    px(sx, sy + 1, GColorWhite);
   }
 }
 
-// A smaller kid blob: 4x4.
+// A smaller kid blob: 5 wide, 4 tall, with a tuft of hair on top.
 static void kid(int x, int y, GColor c, bool happy) {
-  box(c, x, y, 4, 4);
-  box(GColorBlack, x + 1, y + 1, 1, 1);
-  box(GColorBlack, x + 2, y + 1, 1, 1);
+  px(x + 2, y - 1, GColorRed);                     // hair tuft
+  box(c, x + 1, y, 3, 1);
+  box(c, x, y + 1, 5, 2);
+  box(c, x + 1, y + 3, 3, 1);
+  px(x + 1, y + 1, GColorBlack);
+  px(x + 3, y + 1, GColorBlack);
+  px(x, y + 2, GColorMelon);                       // blush
+  px(x + 4, y + 2, GColorMelon);
   if (happy) {
-    box(GColorRed, x + 1, y + 3, 2, 1);
+    px(x + 2, y + 2, GColorRed);                   // open smile
+  } else {
+    px(x + 2, y + 2, GColorBlack);
   }
 }
 
@@ -143,9 +176,15 @@ static void scene_sleep(void) {
   box(GColorWindsorTan, 5, 18, 22, 2);
   box(GColorWindsorTan, 5, 12, 1, 8);
   box(GColorWhite, 6, 12, 7, 3);                 // pillow
-  box(GColorOrange, 7, 12, 5, 3);                // head
+  box(PET_OUT, 7, 11, 1, 1);                     // ears
+  box(PET_OUT, 11, 11, 1, 1);
+  box(PET_BODY, 7, 12, 5, 3);                    // head
   box(GColorBlack, 8, 13, 1, 1);                 // closed eyes
   box(GColorBlack, 10, 13, 1, 1);
+  box(GColorRed, 7, 14, 1, 1);                   // blush
+  box(GColorRed, 11, 14, 1, 1);
+  if (s_tick & 2) box(GColorCeleste, 12, 12, 2, 2);  // sleepy snot bubble
+  else box(GColorCeleste, 12, 12, 1, 1);
   box(GColorCobaltBlue, 12, 13, 14, 5);          // blanket
   box(GColorBlueMoon, 12, 13, 14, 1);
   // floating z's
@@ -161,14 +200,16 @@ static void scene_wake(void) {
   box(GColorYellow, 5, 5, 3, 3);
   box(GColorWhite, 6, 2, 1, 9);
   // stretching pet
-  int px = 14, py = 10;
-  pet(px, py, false, (s_tick & 1));
+  int pxx = 14, pyy = 10;
+  s_bob = 1;
+  pet(pxx, pyy, false, (s_tick & 1));
+  s_bob = 0;
   if ((s_tick & 1) == 0) {
-    box(GColorOrange, px - 1, py - 2, 1, 3);        // arms up
-    box(GColorOrange, px + 8, py - 2, 1, 3);
+    box(PET_OUT, pxx - 1, pyy - 2, 1, 3);          // arms up
+    box(PET_OUT, pxx + 8, pyy - 2, 1, 3);
   } else {
-    box(GColorOrange, px - 2, py + 4, 2, 1);        // arms out
-    box(GColorOrange, px + 8, py + 4, 2, 1);
+    box(PET_OUT, pxx - 2, pyy + 4, 2, 1);          // arms out
+    box(PET_OUT, pxx + 8, pyy + 4, 2, 1);
   }
   // coffee waiting on the floor
   box(GColorWhite, 26, 15, 3, 3);
@@ -203,7 +244,7 @@ static void scene_code(void) {
   }
   // desk, keyboard, typing hands
   box(GColorLightGray, 13, 13, 8, 1);
-  box(GColorOrange, 10, 12 + (s_tick & 1), 3, 1);
+  box(PET_OUT, 10, 12 + (s_tick & 1), 3, 1);
   box(GColorWindsorTan, 10, 14, 19, 2);
   box(GColorWindsorTan, 11, 16, 2, 4);
   box(GColorWindsorTan, 26, 16, 2, 4);
@@ -222,7 +263,7 @@ static void table_scene(bool family) {
   pet(2, 7, (s_tick % 7) == 0, mouth);
   if (family) {
     kid(19, 11, GColorCyan, mouth);
-    kid(24, 11, GColorShockingPink, !mouth);
+    kid(24, 11, GColorYellow, !mouth);
   }
   // table
   box(GColorWindsorTan, 6, 14, 24, 2);
@@ -246,10 +287,12 @@ static void scene_play(void) {
   box(GColorWhite, 2, 2, 8, 7);
   box(GColorCeleste, 3, 3, 6, 5);
   // family
+  s_bob = 1;
   pet(2, 10, (s_tick % 7) == 0, 0);
+  s_bob = 0;
   int hop = (s_tick & 1);
   kid(24, 14 - hop, GColorCyan, true);
-  kid(19, 13 + hop, GColorShockingPink, true);
+  kid(19, 13 + hop, GColorYellow, true);
   // ball arcing between pet and kids
   int t = s_tick % 8;
   int ph = t % 4;
@@ -357,7 +400,7 @@ static void canvas_update(Layer *layer, GContext *ctx) {
   OX = (w - SCENE_W * U) / 2;
   OY = h * 74 / 260;
 
-  graphics_context_set_fill_color(ctx, GColorDarkGray);
+  graphics_context_set_fill_color(ctx, GColorShockingPink);
   graphics_fill_rect(ctx, GRect(OX - U, OY - U, (SCENE_W + 2) * U, (SCENE_H + 2) * U),
                      3 * U, GCornersAll);
 
