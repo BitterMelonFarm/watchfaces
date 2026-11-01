@@ -1,0 +1,18 @@
+{
+  "name": "desk-pet",
+  "author": "edutch95",
+  "version": "1.0.0",
+  "keywords": ["pebble-app"],
+  "private": true,
+  "dependencies": {},
+  "pebble": {
+    "displayName": "Desk Pet",
+    "uuid": "42a0cce0-4d65-4f35-ac02-3a3dd0775eca",
+    "projectType": "native",
+    "sdkVersion": "3",
+    "enableMultiJS": false,
+    "targetPlatforms": ["gabbro"],
+    "watchapp": { "watchface": true },
+    "resources": { "media": [] }
+  }
+}
