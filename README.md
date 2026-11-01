@@ -15,7 +15,7 @@ A Tamagotchi-style pet whose activity follows the time of day.
 | 18:00-22:00 | Playing ball with the kids |
 | Weekends | Play in the morning, couch + TV 13:00-17:00 |
 
-Battery is shown as 5 hearts. All art is drawn with rectangles (no image assets).
+Battery is shown as 5 hearts. A green step bar fills toward 8,000 steps (gold when reached); the pet frowns and cries if you fall well behind pace after 11:00, and smiles once the goal is hit. All art is drawn with rectangles (no image assets).
 
 ### Build
 

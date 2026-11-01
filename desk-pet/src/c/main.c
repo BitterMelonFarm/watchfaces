@@ -18,12 +18,17 @@ typedef enum {
 #define SCENE_W 32
 #define SCENE_H 24
 #define FLOOR_Y 18
+#define STEP_GOAL 8000
+
+typedef enum { MOOD_OK, MOOD_SAD, MOOD_HAPPY } Mood;
 
 static Window *s_window;
 static Layer *s_canvas;
 
 static int s_hour, s_min, s_wday, s_mday;
 static int s_batt = 100;
+static int s_steps;
+static Mood s_mood = MOOD_OK;
 static uint32_t s_tick;
 static char s_time_buf[8];
 static char s_date_buf[16];
@@ -75,8 +80,19 @@ static void pet(int x, int y, bool blink, int mouth) {
   box(GColorMelon, x + 6, y + 4, 1, 1);
   if (mouth) {
     box(GColorRed, x + 3, y + 4, 2, 2);
+  } else if (s_mood == MOOD_SAD) {
+    box(GColorBlack, x + 3, y + 4, 2, 1);          // frown
+    box(GColorBlack, x + 2, y + 5, 1, 1);
+    box(GColorBlack, x + 5, y + 5, 1, 1);
+  } else if (s_mood == MOOD_HAPPY) {
+    box(GColorBlack, x + 2, y + 4, 1, 1);          // smile
+    box(GColorBlack, x + 5, y + 4, 1, 1);
+    box(GColorBlack, x + 3, y + 5, 2, 1);
   } else {
     box(GColorBlack, x + 3, y + 5, 2, 1);
+  }
+  if (s_mood == MOOD_SAD) {
+    box(GColorPictonBlue, x + 2, y + 4 + (int)(s_tick & 1), 1, 1);   // tear
   }
 }
 
@@ -251,6 +267,40 @@ static void scene_chill(void) {
   box(GColorDarkCandyAppleRed, 15, 12, 2, 6);
 }
 
+// ------------------------------------------------------------------ steps
+
+static void update_steps(void) {
+#if defined(PBL_HEALTH)
+  HealthServiceAccessibilityMask m =
+      health_service_metric_accessible(HealthMetricStepCount, time_start_of_today(), time(NULL));
+  s_steps = (m & HealthServiceAccessibilityMaskAvailable)
+                ? (int)health_service_sum_today(HealthMetricStepCount) : 0;
+#else
+  s_steps = 0;
+#endif
+  // Expected pace: linear from 08:00 (0) to 21:00 (full goal).
+  int mins = s_hour * 60 + s_min;
+  int expected = STEP_GOAL * (mins - 8 * 60) / (13 * 60);
+  if (expected < 0) expected = 0;
+  if (expected > STEP_GOAL) expected = STEP_GOAL;
+  if (s_steps >= STEP_GOAL) {
+    s_mood = MOOD_HAPPY;
+  } else if (s_hour >= 11 && s_steps < expected / 2) {
+    s_mood = MOOD_SAD;                              // way behind pace
+  } else {
+    s_mood = MOOD_OK;
+  }
+}
+
+#if defined(PBL_HEALTH)
+static void health_handler(HealthEventType event, void *context) {
+  if (event == HealthEventMovementUpdate || event == HealthEventSignificantUpdate) {
+    update_steps();
+    layer_mark_dirty(s_canvas);
+  }
+}
+#endif
+
 // ------------------------------------------------------------- activities
 
 static Activity pick_activity(int hour, int wday) {
@@ -315,11 +365,20 @@ static void canvas_update(Layer *layer, GContext *ctx) {
                      GRect(0, h * 205 / 260, w, h * 22 / 260),
                      GTextOverflowModeFill, GTextAlignmentCenter, NULL);
 
+  // step meter: bar fills toward the daily goal, gold once reached
+  int bw = w * 90 / 260, bh = h * 5 / 260;
+  int bx = (w - bw) / 2, by = h * 229 / 260;
+  graphics_context_set_fill_color(ctx, GColorDarkGray);
+  graphics_fill_rect(ctx, GRect(bx, by, bw, bh), 0, GCornerNone);
+  int fill = s_steps >= STEP_GOAL ? bw : bw * s_steps / STEP_GOAL;
+  graphics_context_set_fill_color(ctx, s_steps >= STEP_GOAL ? GColorYellow : GColorGreen);
+  graphics_fill_rect(ctx, GRect(bx, by, fill, bh), 0, GCornerNone);
+
   // battery hearts (each heart = 20%)
   int hu = 3;
   int spacing = 14;
   int x0 = (w - (4 * spacing + 3 * hu)) / 2;
-  int y0 = h * 230 / 260;
+  int y0 = h * 239 / 260;
   int full = (s_batt + 19) / 20;
   for (int i = 0; i < 5; i++) {
     heart_raw(ctx, x0 + i * spacing, y0, hu,
@@ -348,6 +407,7 @@ static void tick_handler(struct tm *tick_time, TimeUnits units_changed) {
   s_tick++;
   if (units_changed & MINUTE_UNIT) {
     update_time();
+    update_steps();
   }
   layer_mark_dirty(s_canvas);
 }
@@ -378,16 +438,23 @@ static void init(void) {
   window_stack_push(s_window, true);
 
   update_time();
+  update_steps();
   s_batt = battery_state_service_peek().charge_percent;
 
   // One tick per second drives the 1 fps "Tamagotchi" animation.
   tick_timer_service_subscribe(SECOND_UNIT, tick_handler);
   battery_state_service_subscribe(battery_handler);
+#if defined(PBL_HEALTH)
+  health_service_events_subscribe(health_handler, NULL);
+#endif
 }
 
 static void deinit(void) {
   tick_timer_service_unsubscribe();
   battery_state_service_unsubscribe();
+#if defined(PBL_HEALTH)
+  health_service_events_unsubscribe();
+#endif
   window_destroy(s_window);
 }
 
