@@ -19,7 +19,7 @@ A virtual-pet-style watchface where a little pet whose activity follows the time
 | 20:00 | Bedtime story: reading to the kids, who fall asleep at :30 | same |
 | 21:00 | Reading in bed | same |
 
-The time sits in a pink-framed navy display with rivets, a drop-shadowed numeral and a blinking colon. The scene is a 64x42 pixel grid (16x16 pet sprites with outlines, shading and glossy eyes; textured wallpaper and wood floors; beveled furniture; pet shadows). Battery is shown as 5 hearts. A green step bar fills toward 8,000 steps (gold when reached); the pet frowns and cries if you fall well behind pace after 11:00, and smiles once the goal is hit. All art is drawn with rectangles (no image assets).
+Colours are softened through one palette map (`tools/gen_palette.py`, applied to every draw call) and the preview tool takes its colours straight from the SDK header, so renders match the watch's real palette. The time sits in a mauve-framed navy display with rivets, a drop-shadowed numeral and a blinking colon. The scene is a 64x42 pixel grid (16x16 pet sprites with outlines, shading and glossy eyes; textured wallpaper and wood floors; beveled furniture; pet shadows). Battery is shown as 5 hearts. A green step bar fills toward 8,000 steps (gold when reached); the pet frowns and cries if you fall well behind pace after 11:00, and smiles once the goal is hit. All art is drawn with rectangles (no image assets).
 
 ### Build
 
