@@ -39,7 +39,7 @@ Nine pets: blob (pink), cat (orange tabby with whiskers and a wagging tail), bun
 
 ![eldritch pets](desk-pet/docs/eldritch.png)
 
-Rows (eldritch): cthulhu, shoggoth, deep one, great eye.
+Columns: coding, play, sad at the desk, happy on a walk, asleep. Rows (eldritch): cthulhu, shoggoth, deep one, great eye.
 
 ### Status
 

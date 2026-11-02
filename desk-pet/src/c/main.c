@@ -152,7 +152,7 @@ static void load_species(int id) {
       s_sp = (Species){GColorTiffanyBlue, GColorCobaltBlue, GColorShockingPink, GColorTiffanyBlue, EARS_DEEP};
       break;
     case 8:  // great eye: a floating eyeball on tentacles
-      s_sp = (Species){GColorWhite, GColorLightGray, GColorRed, GColorWhite, EARS_EYE};
+      s_sp = (Species){GColorWhite, GColorIndigo, GColorRed, GColorWhite, EARS_EYE};
       break;
   }
 }
@@ -168,16 +168,29 @@ static void px(int x, int y, GColor c) { box(c, x, y, 1, 1); }
 static const int8_t BODY_A[15] = {4, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 3};
 static const int8_t BODY_B[15] = {11, 13, 14, 15, 15, 15, 15, 15, 15, 15, 15, 15, 14, 13, 12};
 
+static bool s_sleeping;   // draw only the head, eyes shut (used by the bed scene)
+
+// Fill fine pixels, but never below row ymax (lets the bed hide the body).
+static void pf(GColor c, int x, int y, int w, int h, int ymax) {
+  if (y >= ymax) return;
+  if (y + h > ymax) h = ymax - y;
+  fbox(c, x, y, w, h);
+}
+
 static int imax(int a, int b) { return a > b ? a : b; }
 static int imin(int a, int b) { return a < b ? a : b; }
 
 // The grown-up pet: a 16x16 fine-pixel sprite (8x8 coarse) plus ears/extras.
 // mouth: 0 = closed, 1 = open (chewing / talking)
 static void pet(int x, int y, bool blink, int mouth) {
-  if (s_bob && (s_tick & 1)) y -= 1;               // little hop
-  if (s_sp.ears == EARS_EYE && (s_tick & 2)) y -= 1;   // the eye bobs in the air
+  const bool sl = s_sleeping;
+  const Mood md = sl ? MOOD_OK : s_mood;
+  if (sl) { blink = true; mouth = 0; }
+  if (!sl && s_bob && (s_tick & 1)) y -= 1;        // little hop
+  if (!sl && s_sp.ears == EARS_EYE && (s_tick & 2)) y -= 1;   // the eye bobs in the air
   const int X = x * 2, Y = y * 2;
-#define F(c, dx, dy, w, h) fbox((c), X + (dx), Y + (dy), (w), (h))
+  const int maxrow = sl ? 10 : 99;
+#define F(c, dx, dy, w, h) pf((c), X + (dx), Y + (dy), (w), (h), Y + maxrow)
   const EarStyle k = s_sp.ears;
   const GColor out = s_sp.out, body = s_sp.body;
   const GColor hl = shade(body, 1), sh = shade(body, -1);
@@ -185,7 +198,7 @@ static void pet(int x, int y, bool blink, int mouth) {
 
   // soft contact shadow on the floor
   int gap = FLOOR_FINE - (Y + 16);
-  if (s_floor_ok && gap >= 0 && gap <= 2) {
+  if (!sl && s_floor_ok && gap >= 0 && gap <= 2) {
     fbox(shade(s_floor_col, -1), X + 2 + gap, FLOOR_FINE, 12 - 2 * gap, 2);
   }
 
@@ -208,14 +221,24 @@ static void pet(int x, int y, bool blink, int mouth) {
       F(out, 2, -3, 5, 5);  F(out, 9, -3, 5, 5);
       break;
     case EARS_CTHULHU:
-      F(s_sp.snout, -4, 3 + t, 4, 2);  F(s_sp.snout, -5, 5 + t, 5, 3);  F(s_sp.snout, -3, 8 + t, 3, 2);
-      F(s_sp.snout, 16, 3 + t, 4, 2);  F(s_sp.snout, 16, 5 + t, 5, 3);  F(s_sp.snout, 16, 8 + t, 3, 2);
-      F(shade(s_sp.snout, 1), -4, 5 + t, 2, 2);  F(shade(s_sp.snout, 1), 18, 5 + t, 2, 2);
+      if (X >= 5) {                                  // spread, flapping bat wings
+        F(s_sp.snout, -4, 3 + t, 4, 2);  F(s_sp.snout, -5, 5 + t, 5, 3);  F(s_sp.snout, -3, 8 + t, 3, 2);
+        F(shade(s_sp.snout, 1), -4, 5 + t, 2, 2);
+      } else {                                       // folded against the wall
+        F(s_sp.snout, -2, 3 + t, 2, 7);  F(shade(s_sp.snout, 1), -2, 5 + t, 1, 2);
+      }
+      if (X + 21 <= FINE_W) {
+        F(s_sp.snout, 16, 3 + t, 4, 2);  F(s_sp.snout, 16, 5 + t, 5, 3);  F(s_sp.snout, 16, 8 + t, 3, 2);
+        F(shade(s_sp.snout, 1), 18, 5 + t, 2, 2);
+      } else {
+        F(s_sp.snout, 16, 3 + t, 2, 7);  F(shade(s_sp.snout, 1), 17, 5 + t, 1, 2);
+      }
       F(out, 3, -2, 2, 3);  F(out, 11, -2, 2, 3);   // tiny horns
       break;
     case EARS_SHOGGOTH:
-      F(out, 3, -2, 4, 3);  F(out, 9, -2, 2, 3);
-      F(out, 11, -4 + t, 2, 5);  F(out, 6, -3, 2, 1);
+      F(out, 3, -1, 3, 2);
+      F(out, 7, -3 + t, 3, 4);  F(shade(out, 1), 8, -2 + t, 1, 1);
+      F(out, 11, -1, 2, 2);
       break;
     case EARS_DEEP:
       F(out, 4, -3, 2, 4);  F(out, 6, -5, 4, 6);  F(out, 10, -3, 2, 4);
@@ -255,7 +278,7 @@ static void pet(int x, int y, bool blink, int mouth) {
     }
   }
   // little arms
-  if (k != EARS_EYE && k != EARS_CTHULHU) {
+  if (!sl && k != EARS_EYE && k != EARS_CTHULHU) {
     F(out, -1, 9, 1, 3);  F(out, 16, 9, 1, 3);
   }
 
@@ -279,7 +302,7 @@ static void pet(int x, int y, bool blink, int mouth) {
     if (((int)s_tick + 3) % 4 != 0) { F(GColorGreen, 14, 9, 2, 2);  F(GColorBlack, 14, 10, 1, 1); }
     if (((int)s_tick + 1) % 5 != 0) { F(GColorYellow, 2, 12, 2, 2);  F(GColorBlack, 3, 13, 1, 1); }
   } else if (k == EARS_DEEP) {
-    F(out, 16, 10, 2, 6);  F(out, 18, 8, 2, 3);  F(out, 18, 14, 2, 3);  F(shade(out, 1), 16, 11, 1, 4);
+    F(out, 16, 11, 2, 3);  F(out, 18, 9, 2, 3);  F(out, 18, 13, 2, 3);  F(shade(out, 1), 17, 12, 1, 1);
     F(out, 1, 9, 3, 1);  F(out, 1, 11, 3, 1);  F(out, 12, 9, 3, 1);  F(out, 12, 11, 3, 1);   // gills
   }
 
@@ -306,7 +329,7 @@ static void pet(int x, int y, bool blink, int mouth) {
       F(GColorBlack, 4, -1, 2, 3);  F(GColorBlack, 11, -1, 2, 3);
       F(GColorWhite, 4, -1, 1, 1);  F(GColorWhite, 11, -1, 1, 1);
     }
-  } else if (k == EARS_DEEP && !blink && s_mood != MOOD_HAPPY) {
+  } else if (k == EARS_DEEP && !blink && md != MOOD_HAPPY) {
     // big bulging fish eyes looking to the side
     F(GColorWhite, 2, 4, 5, 5);  F(GColorWhite, 9, 4, 5, 5);
     F(out, 3, 4, 3, 1);  F(out, 10, 4, 3, 1);
@@ -315,7 +338,7 @@ static void pet(int x, int y, bool blink, int mouth) {
   } else if (blink) {
     F(GColorBlack, 3, 7, 3, 1);  F(GColorBlack, 10, 7, 3, 1);
     F(out, 2, 7, 1, 1);  F(out, 13, 7, 1, 1);
-  } else if (s_mood == MOOD_HAPPY) {
+  } else if (md == MOOD_HAPPY) {
     F(GColorBlack, 3, 8, 1, 1);  F(GColorBlack, 4, 6, 2, 2);  F(GColorBlack, 6, 8, 1, 1);   // ^ ^
     F(GColorBlack, 9, 8, 1, 1);  F(GColorBlack, 10, 6, 2, 2);  F(GColorBlack, 12, 8, 1, 1);
   } else {
@@ -337,9 +360,9 @@ static void pet(int x, int y, bool blink, int mouth) {
     // an eyeball has no mouth
   } else if (mouth) {
     F(GColorRed, 6, 10, 4, 3);  F(GColorShockingPink, 7, 12, 2, 1);  F(GColorBlack, 6, 10, 4, 1);
-  } else if (s_mood == MOOD_SAD) {
+  } else if (md == MOOD_SAD) {
     F(GColorBlack, 6, 10, 4, 1);  F(GColorBlack, 5, 11, 1, 1);  F(GColorBlack, 10, 11, 1, 1);
-  } else if (s_mood == MOOD_HAPPY) {
+  } else if (md == MOOD_HAPPY) {
     F(GColorBlack, 5, 10, 1, 1);  F(GColorBlack, 10, 10, 1, 1);  F(GColorBlack, 6, 11, 4, 1);
     F(GColorRed, 7, 11, 2, 1);
   } else if (k == EARS_FROG) {
@@ -363,7 +386,7 @@ static void pet(int x, int y, bool blink, int mouth) {
     F(shade(out, 1), 3, 13, 1, 1);  F(shade(out, 1), 7, 13, 1, 1);  F(shade(out, 1), 11, 13, 1, 1);
   }
 
-  if (s_mood == MOOD_SAD) {
+  if (md == MOOD_SAD) {
     F(GColorPictonBlue, 4, 9, 1, 2 + t);                  // tear
     F(GColorWhite, 4, 9, 1, 1);
     // little rain cloud overhead
@@ -372,7 +395,7 @@ static void pet(int x, int y, bool blink, int mouth) {
     F(GColorWhite, 4, cy + 2, 3, 1);
     F(GColorPictonBlue, 5 + 4 * t, cy + 5, 1, 2);
     F(GColorPictonBlue, 10 - 4 * t, cy + 5, 1, 2);
-  } else if (s_mood == MOOD_HAPPY) {
+  } else if (md == MOOD_HAPPY) {
     // twinkling sparkles
     int sx = t ? 16 : -3;
     int sy = (k == EARS_BUNNY) ? -12 : -9;
@@ -463,21 +486,20 @@ static void scene_sleep(void) {
       box(GColorWhite, sx[i], sy[i], 1, 1);
     }
   }
-  // bed
+  // bed with the sleeping pet's head on the pillow
   box(GColorWindsorTan, 5, 18, 22, 2);
   box(GColorWindsorTan, 5, 12, 1, 8);
-  box(GColorWhite, 6, 12, 7, 3);                 // pillow
-  box(PET_OUT, 7, 11, 1, 1);                     // ears
-  box(PET_OUT, 11, 11, 1, 1);
-  box(PET_BODY, 7, 12, 5, 3);                    // head
-  box(GColorBlack, 8, 13, 1, 1);                 // closed eyes
-  box(GColorBlack, 10, 13, 1, 1);
-  box(GColorRed, 7, 14, 1, 1);                   // blush
-  box(GColorRed, 11, 14, 1, 1);
-  if (s_tick & 2) box(GColorCeleste, 12, 12, 2, 2);  // sleepy snot bubble
-  else box(GColorCeleste, 12, 12, 1, 1);
+  fbox(GColorWhite, 12, 25, 18, 5);
+  fbox(GColorLightGray, 12, 29, 18, 1);
+  s_sleeping = true;
+  pet(6, 8, true, 0);
+  s_sleeping = false;
+  if (s_tick & 2) fbox(GColorCeleste, 29, 23, 3, 3);   // sleepy snot bubble
+  else fbox(GColorCeleste, 29, 24, 2, 2);
   box(GColorCobaltBlue, 12, 13, 14, 5);          // blanket
   box(GColorBlueMoon, 12, 13, 14, 1);
+  box(GColorWhite, 15, 15, 2, 1);                // blanket stitching
+  box(GColorWhite, 21, 15, 2, 1);
   // floating z's
   static const char *zs[3] = {"z", "zz", "zzz"};
   txt(zs[(s_tick / 2) % 3], FONT_KEY_GOTHIC_24_BOLD, GColorWhite, 13, 4, 10, 8);
