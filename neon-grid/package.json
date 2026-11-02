@@ -1,0 +1,19 @@
+{
+  "name": "neon-grid",
+  "author": "edutch95",
+  "version": "1.0.0",
+  "keywords": ["pebble-app"],
+  "private": true,
+  "dependencies": {},
+  "pebble": {
+    "displayName": "Neon Grid",
+    "uuid": "7c4b4c57-5efc-463b-85ba-9d501a4150ff",
+    "projectType": "native",
+    "sdkVersion": "3",
+    "enableMultiJS": false,
+    "targetPlatforms": ["gabbro"],
+    "watchapp": { "watchface": true },
+    "capabilities": ["health"],
+    "resources": { "media": [] }
+  }
+}

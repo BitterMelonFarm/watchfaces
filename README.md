@@ -2,6 +2,10 @@
 
 Watchfaces for the Pebble Round 2 (`gabbro` platform, 260x260 round color).
 
+## neon-grid
+
+A cyberpunk watchface: glitchy RGB-split time over a rain-soaked neon skyline, with step and battery bars and three colour themes (flick your wrist to switch). See [`neon-grid/`](neon-grid/README.md).
+
 ## desk-pet
 
 A virtual-pet-style watchface where a little pet whose activity follows the time of day.
