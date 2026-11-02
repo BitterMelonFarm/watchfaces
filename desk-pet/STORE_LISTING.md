@@ -34,7 +34,7 @@ gets sad (rain cloud!); hit the goal and it celebrates.
 Controls: flick your wrist once to pet your pet (hearts!), flick twice within two seconds
 to switch to the next pet. Your choice is remembered.
 
-Battery shows as five hearts. The pet animates once a second only while the face is
+The time is shown in a pink-framed display with a blinking colon. Battery shows as five hearts. The pet animates once a second only while the face is
 visible and the battery is above 15%; otherwise it ticks once a minute to save power.
 
 Privacy: Desk Pet reads your step count from Pebble Health to draw the step bar. Nothing

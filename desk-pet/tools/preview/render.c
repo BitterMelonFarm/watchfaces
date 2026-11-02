@@ -15,8 +15,15 @@ void graphics_context_set_fill_color(GContext *c, GColor col) { fillc = col; }
 void graphics_context_set_text_color(GContext *c, GColor col) { textc = col; }
 void graphics_fill_rect(GContext *c, GRect r, uint16_t rad, GCornerMask m) {
   for (int y = r.origin.y; y < r.origin.y + r.size.h; y++)
-    for (int x = r.origin.x; x < r.origin.x + r.size.w; x++)
-      if (x >= 0 && y >= 0 && x < SW && y < SW) fb[y][x] = fillc.argb;
+    for (int x = r.origin.x; x < r.origin.x + r.size.w; x++) {
+      if (x < 0 || y < 0 || x >= SW || y >= SW) continue;
+      if (m == GCornersAll && rad > 0) {        // honour rounded corners like the real API
+        int cx = x < r.origin.x + (int)rad ? r.origin.x + rad : (x >= r.origin.x + r.size.w - (int)rad ? r.origin.x + r.size.w - 1 - rad : x);
+        int cy = y < r.origin.y + (int)rad ? r.origin.y + rad : (y >= r.origin.y + r.size.h - (int)rad ? r.origin.y + r.size.h - 1 - rad : y);
+        if ((x - cx) * (x - cx) + (y - cy) * (y - cy) > (int)(rad * rad)) continue;
+      }
+      fb[y][x] = fillc.argb;
+    }
 }
 void graphics_draw_text(GContext *c, const char *s, GFont f, GRect r, GTextOverflowMode o, GTextAlignment a, void *l) {
   fb_text_log(s, f, r, textc, a);

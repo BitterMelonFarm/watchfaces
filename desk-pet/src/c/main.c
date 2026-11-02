@@ -37,6 +37,7 @@ static int s_batt = 100;
 static int s_steps;
 static Mood s_mood = MOOD_OK;
 static uint32_t s_tick;
+static bool s_in_focus = true;   // false while a notification/menu covers the face
 static char s_time_buf[8];
 static char s_date_buf[16];
 
@@ -1206,11 +1207,43 @@ static void canvas_update(Layer *layer, GContext *ctx) {
   graphics_context_set_fill_color(ctx, GColorBlack);
   graphics_fill_rect(ctx, b, 0, GCornerNone);
 
-  // time
-  graphics_context_set_text_color(ctx, GColorWhite);
-  graphics_draw_text(ctx, s_time_buf, fonts_get_system_font(FONT_KEY_BITHAM_42_BOLD),
-                     GRect(0, h * 20 / 260, w, h * 52 / 260),
-                     GTextOverflowModeFill, GTextAlignmentCenter, NULL);
+  // time: a pink-framed navy "display" with rivets, a shadowed numeral and a blinking colon
+  {
+    int px_w = w / 260 ? w / 260 : 1;
+    GRect panel = GRect(w * 60 / 260, h * 22 / 260, w * 140 / 260, h * 42 / 260);
+    graphics_context_set_fill_color(ctx, GColorShockingPink);
+    graphics_fill_rect(ctx, panel, 9 * px_w, GCornersAll);
+    graphics_context_set_fill_color(ctx, GColorOxfordBlue);
+    graphics_fill_rect(ctx, GRect(panel.origin.x + 3 * px_w, panel.origin.y + 3 * px_w,
+                                  panel.size.w - 6 * px_w, panel.size.h - 6 * px_w),
+                       6 * px_w, GCornersAll);
+    graphics_context_set_fill_color(ctx, GColorCobaltBlue);               // glassy top highlight
+    graphics_fill_rect(ctx, GRect(panel.origin.x + 9 * px_w, panel.origin.y + 4 * px_w,
+                                  panel.size.w - 18 * px_w, px_w), 0, GCornerNone);
+    graphics_context_set_fill_color(ctx, GColorMelon);                    // corner rivets
+    int rx0 = panel.origin.x + 4 * px_w, rx1 = panel.origin.x + panel.size.w - 6 * px_w;
+    int ry0 = panel.origin.y + 4 * px_w, ry1 = panel.origin.y + panel.size.h - 6 * px_w;
+    graphics_fill_rect(ctx, GRect(rx0, ry0, 2 * px_w, 2 * px_w), 0, GCornerNone);
+    graphics_fill_rect(ctx, GRect(rx1, ry0, 2 * px_w, 2 * px_w), 0, GCornerNone);
+    graphics_fill_rect(ctx, GRect(rx0, ry1, 2 * px_w, 2 * px_w), 0, GCornerNone);
+    graphics_fill_rect(ctx, GRect(rx1, ry1, 2 * px_w, 2 * px_w), 0, GCornerNone);
+
+    char tb[8];
+    strncpy(tb, s_time_buf, sizeof(tb));
+    tb[sizeof(tb) - 1] = '\0';
+    if ((s_tick & 1) && s_in_focus) {                                     // blinking colon
+      for (char *c = tb; *c; c++) {
+        if (*c == ':') *c = ' ';
+      }
+    }
+    GFont tf = fonts_get_system_font(FONT_KEY_BITHAM_42_BOLD);
+    GRect tr = GRect(0, h * 19 / 260, w, h * 52 / 260);
+    graphics_context_set_text_color(ctx, GColorCobaltBlue);               // drop shadow
+    graphics_draw_text(ctx, tb, tf, GRect(tr.origin.x + px_w, tr.origin.y + px_w, tr.size.w, tr.size.h),
+                       GTextOverflowModeFill, GTextAlignmentCenter, NULL);
+    graphics_context_set_text_color(ctx, GColorWhite);
+    graphics_draw_text(ctx, tb, tf, tr, GTextOverflowModeFill, GTextAlignmentCenter, NULL);
+  }
 
   // scene frame + scene
   g = ctx;
@@ -1322,8 +1355,6 @@ static void tap_handler(AccelAxisType axis, int32_t direction) {
 
 // Animate once a second only while the face is visible and the battery is
 // healthy; otherwise tick once a minute to save power.
-static bool s_in_focus = true;
-
 static void update_tick_rate(void) {
   TimeUnits u = (s_in_focus && s_batt > 15) ? SECOND_UNIT : MINUTE_UNIT;
   tick_timer_service_subscribe(u, tick_handler);
