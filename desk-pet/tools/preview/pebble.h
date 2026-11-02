@@ -67,7 +67,10 @@ typedef struct { void (*load)(Window *); void (*unload)(Window *); } WindowHandl
 #define PBL_HEALTH 1
 
 // Framebuffer + text log, implemented in render.c.
-extern uint8_t fb[260][260];
+#ifndef SW
+#define SW 260
+#endif
+extern uint8_t fb[SW][SW];
 void fb_text_log(const char *s, GFont f, GRect r, GColor c, GTextAlignment a);
 
 void graphics_context_set_fill_color(GContext *, GColor);
@@ -112,3 +115,6 @@ void accel_tap_service_unsubscribe(void);
 bool persist_exists(uint32_t);
 int32_t persist_read_int(uint32_t);
 int persist_write_int(uint32_t, int32_t);
+typedef void (*AppFocusHandler)(bool);
+void app_focus_service_subscribe(AppFocusHandler);
+void app_focus_service_unsubscribe(void);

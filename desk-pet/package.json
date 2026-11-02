@@ -2,7 +2,9 @@
   "name": "desk-pet",
   "author": "edutch95",
   "version": "1.0.0",
-  "keywords": ["pebble-app"],
+  "keywords": [
+    "pebble-app"
+  ],
   "private": true,
   "dependencies": {},
   "pebble": {
@@ -11,8 +13,17 @@
     "projectType": "native",
     "sdkVersion": "3",
     "enableMultiJS": false,
-    "targetPlatforms": ["gabbro"],
-    "watchapp": { "watchface": true },
-    "resources": { "media": [] }
+    "targetPlatforms": [
+      "gabbro"
+    ],
+    "watchapp": {
+      "watchface": true
+    },
+    "resources": {
+      "media": []
+    },
+    "capabilities": [
+      "health"
+    ]
   }
 }

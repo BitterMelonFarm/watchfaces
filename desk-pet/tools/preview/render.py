@@ -7,9 +7,10 @@ from PIL import Image, ImageDraw, ImageFont
 
 here = os.path.dirname(os.path.abspath(__file__))
 out = sys.argv[1] if len(sys.argv) > 1 else os.path.join(here, "out")
+SW = int(sys.argv[2]) if len(sys.argv) > 2 else 260   # screen size: 260 = Round 2, 180 = Time Round
 os.makedirs(out, exist_ok=True)
 exe = os.path.join(out, "render")
-subprocess.run(["gcc", "-O1", "-Wall", "-I", here, "-o", exe, os.path.join(here, "render.c")], check=True)
+subprocess.run(["gcc", "-O1", "-Wall", f"-DSW={SW}", "-I", here, "-o", exe, os.path.join(here, "render.c")], check=True)
 
 def col(a):  # Pebble 6-bit color -> RGB
     return tuple(((a >> s) & 3) * 85 for s in (4, 2, 0))
@@ -23,11 +24,11 @@ def fnt(name):
 
 def frame(name, hour, wday, minute=9, steps=3000, batt=80, tick=0, species=0, react=0):
     r = subprocess.run([exe, *map(str, (hour, wday, minute, steps, batt, tick, species, react))], capture_output=True, check=True)
-    im = Image.new("RGB", (260, 260))
+    im = Image.new("RGB", (SW, SW))
     px = im.load()
-    for y in range(260):
-        for x in range(260):
-            px[x, y] = col(r.stdout[y * 260 + x])
+    for y in range(SW):
+        for x in range(SW):
+            px[x, y] = col(r.stdout[y * SW + x])
     d = ImageDraw.Draw(im)
     for line in r.stderr.decode().splitlines():
         if not line.startswith("T|"): continue
@@ -37,9 +38,9 @@ def frame(name, hour, wday, minute=9, steps=3000, batt=80, tick=0, species=0, re
         tw = d.textlength(s, font=ft)
         tx = x + (w - tw) / 2 if al == "1" else x
         d.text((tx, y + 4), s, font=ft, fill=col(int(c)))
-    mask = Image.new("L", (260, 260), 0)
-    ImageDraw.Draw(mask).ellipse((0, 0, 259, 259), fill=255)
-    round_im = Image.new("RGB", (260, 260), (30, 30, 30))
+    mask = Image.new("L", (SW, SW), 0)
+    ImageDraw.Draw(mask).ellipse((0, 0, SW - 1, SW - 1), fill=255)
+    round_im = Image.new("RGB", (SW, SW), (30, 30, 30))
     round_im.paste(im, mask=mask)
     round_im.save(os.path.join(out, name + ".png"))
     return round_im
@@ -56,9 +57,9 @@ SCENES = [
     ("code_sad", 14, 2, 0, 400, 80, 2), ("happy", 19, 2, 0, 8500, 100, 1),
 ]
 ims = [frame(*s) for s in SCENES]
-sheet = Image.new("RGB", (260 * 4, 260 * 5))
+sheet = Image.new("RGB", (SW * 4, SW * 5))
 for i, im in enumerate(ims):
-    sheet.paste(im, ((i % 4) * 260, (i // 4) * 260))
+    sheet.paste(im, ((i % 4) * SW, (i // 4) * SW))
 sheet.save(os.path.join(out, "sheet.png"))
 # One row per species: code, play, sad-at-desk, happy.
 NAMES = ["blob", "cat", "bunny", "bear", "frog", "cthulhu", "shoggoth", "deepone", "eye"]
@@ -68,23 +69,23 @@ for sp, n in enumerate(NAMES):
                  frame(f"{n}_sad", 14, 2, 0, 400, 80, 3, sp), frame(f"{n}_happy", 10, 6, 0, 8500, 80, 1, sp),
                  frame(f"{n}_sleep", 23, 2, 30, 3000, 80, 3, sp)])
 for fname, sel in (("pets.png", rows[:5]), ("eldritch.png", rows[5:])):
-    sheet2 = Image.new("RGB", (260 * 5, 260 * len(sel)))
+    sheet2 = Image.new("RGB", (SW * 5, SW * len(sel)))
     for r_i, row in enumerate(sel):
         for c_i, im in enumerate(row):
-            sheet2.paste(im, (c_i * 260, r_i * 260))
+            sheet2.paste(im, (c_i * SW, r_i * SW))
     sheet2.save(os.path.join(out, fname))
 # Tap-to-pet reaction (hearts + hop) for a few pets.
 rs = [frame(f"react_{sp}", 19, 2, 0, 5000, 80, 3, sp, 1) for sp in (0, 1, 5, 8)]
-rsheet = Image.new("RGB", (260 * 4, 260))
-for i, im in enumerate(rs): rsheet.paste(im, (i * 260, 0))
+rsheet = Image.new("RGB", (SW * 4, 260))
+for i, im in enumerate(rs): rsheet.paste(im, (i * SW, 0))
 rsheet.save(os.path.join(out, "react.png"))
 
 # Eldritch quirks: (species, scene) pairs that have special props.
 Q = [(5, "code", 10, 2, 9), (5, "sleep", 23, 2, 30), (6, "code", 10, 2, 9), (6, "sleep", 23, 2, 30),
      (7, "code", 10, 2, 9), (7, "brush", 7, 2, 40), (8, "code", 10, 2, 9), (8, "sleep", 23, 2, 30)]
 qs = [frame(f"quirk_{sp}_{n}", h, w, m, 3000, 80, 3, sp) for sp, n, h, w, m in Q]
-qsheet = Image.new("RGB", (260 * 4, 260 * 2))
+qsheet = Image.new("RGB", (SW * 4, SW * 2))
 for i, im in enumerate(qs):
-    qsheet.paste(im, ((i % 4) * 260, (i // 4) * 260))
+    qsheet.paste(im, ((i % 4) * SW, (i // 4) * SW))
 qsheet.save(os.path.join(out, "quirks.png"))
 print("wrote", out)

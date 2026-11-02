@@ -1,4 +1,4 @@
-// Desk Pet - a tiny Tamagotchi-style watchface for Pebble Round 2 (gabbro).
+// Desk Pet - a tiny virtual-pet watchface for Pebble Round 2 (gabbro).
 // The pet's activity follows the time of day: sleeping, waking, coding,
 // lunch, dinner, playing with the kids, and watching TV on weekends.
 // All art is drawn with rectangles on a 32x24 "pixel" grid, so no assets.
@@ -1285,7 +1285,9 @@ static void update_time(void) {
   if (!clock_is_24h_style() && s_time_buf[0] == '0') {
     memmove(s_time_buf, s_time_buf + 1, strlen(s_time_buf));
   }
-  strftime(s_date_buf, sizeof(s_date_buf), "%a %b %e", t);
+  strftime(s_date_buf, sizeof(s_date_buf), "%a %b ", t);
+  size_t dl = strlen(s_date_buf);
+  snprintf(s_date_buf + dl, sizeof(s_date_buf) - dl, "%d", t->tm_mday);   // no padding space
 }
 
 static void tick_handler(struct tm *tick_time, TimeUnits units_changed) {
@@ -1318,8 +1320,24 @@ static void tap_handler(AccelAxisType axis, int32_t direction) {
   layer_mark_dirty(s_canvas);
 }
 
+// Animate once a second only while the face is visible and the battery is
+// healthy; otherwise tick once a minute to save power.
+static bool s_in_focus = true;
+
+static void update_tick_rate(void) {
+  TimeUnits u = (s_in_focus && s_batt > 15) ? SECOND_UNIT : MINUTE_UNIT;
+  tick_timer_service_subscribe(u, tick_handler);
+}
+
+static void focus_handler(bool in_focus) {
+  s_in_focus = in_focus;
+  update_tick_rate();
+  layer_mark_dirty(s_canvas);
+}
+
 static void battery_handler(BatteryChargeState state) {
   s_batt = state.charge_percent;
+  update_tick_rate();
   layer_mark_dirty(s_canvas);
 }
 
@@ -1344,13 +1362,15 @@ static void init(void) {
   window_stack_push(s_window, true);
 
   s_species = persist_exists(PERSIST_SPECIES) ? persist_read_int(PERSIST_SPECIES) % NUM_SPECIES : 0;
+  if (s_species < 0) s_species = 0;   // ignore a corrupt saved value
   load_species(s_species);
   update_time();
   update_steps();
   s_batt = battery_state_service_peek().charge_percent;
 
-  // One tick per second drives the 1 fps "Tamagotchi" animation.
-  tick_timer_service_subscribe(SECOND_UNIT, tick_handler);
+  // One tick per second drives the 1 fps retro animation (see update_tick_rate).
+  update_tick_rate();
+  app_focus_service_subscribe(focus_handler);
   battery_state_service_subscribe(battery_handler);
   accel_tap_service_subscribe(tap_handler);
 #if defined(PBL_HEALTH)
@@ -1360,6 +1380,7 @@ static void init(void) {
 
 static void deinit(void) {
   tick_timer_service_unsubscribe();
+  app_focus_service_unsubscribe();
   battery_state_service_unsubscribe();
   accel_tap_service_unsubscribe();
 #if defined(PBL_HEALTH)

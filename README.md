@@ -4,7 +4,7 @@ Watchfaces for the Pebble Round 2 (`gabbro` platform, 260x260 round color).
 
 ## desk-pet
 
-A Tamagotchi-style pet whose activity follows the time of day.
+A virtual-pet-style watchface where a little pet whose activity follows the time of day.
 
 | Time | Weekdays | Weekends |
 |---|---|---|

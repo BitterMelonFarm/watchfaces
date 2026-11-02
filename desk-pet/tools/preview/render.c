@@ -4,7 +4,7 @@
 #include "../../src/c/main.c"
 #undef main
 
-uint8_t fb[260][260];
+uint8_t fb[SW][SW];
 static GColor fillc, textc;
 static int g_steps;
 
@@ -16,13 +16,13 @@ void graphics_context_set_text_color(GContext *c, GColor col) { textc = col; }
 void graphics_fill_rect(GContext *c, GRect r, uint16_t rad, GCornerMask m) {
   for (int y = r.origin.y; y < r.origin.y + r.size.h; y++)
     for (int x = r.origin.x; x < r.origin.x + r.size.w; x++)
-      if (x >= 0 && y >= 0 && x < 260 && y < 260) fb[y][x] = fillc.argb;
+      if (x >= 0 && y >= 0 && x < SW && y < SW) fb[y][x] = fillc.argb;
 }
 void graphics_draw_text(GContext *c, const char *s, GFont f, GRect r, GTextOverflowMode o, GTextAlignment a, void *l) {
   fb_text_log(s, f, r, textc, a);
 }
 GFont fonts_get_system_font(const char *k) { return k; }
-GRect layer_get_bounds(const Layer *l) { return GRect(0, 0, 260, 260); }
+GRect layer_get_bounds(const Layer *l) { return GRect(0, 0, SW, SW); }
 Layer *layer_create(GRect r) { return NULL; }
 void layer_destroy(Layer *l) {}
 void layer_set_update_proc(Layer *l, void (*p)(Layer *, GContext *)) {}
@@ -41,6 +41,8 @@ void tick_timer_service_unsubscribe(void) {}
 void battery_state_service_subscribe(void (*h)(BatteryChargeState)) {}
 void battery_state_service_unsubscribe(void) {}
 void app_event_loop(void) {}
+void app_focus_service_subscribe(AppFocusHandler h) {}
+void app_focus_service_unsubscribe(void) {}
 void accel_tap_service_subscribe(AccelTapHandler h) {}
 void accel_tap_service_unsubscribe(void) {}
 bool persist_exists(uint32_t k) { return false; }
