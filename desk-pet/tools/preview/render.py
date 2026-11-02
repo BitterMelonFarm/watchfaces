@@ -65,7 +65,7 @@ NAMES = ["blob", "cat", "bunny", "bear", "frog", "cthulhu", "shoggoth", "deepone
 rows = []
 for sp, n in enumerate(NAMES):
     rows.append([frame(f"{n}_code", 10, 2, 9, 3000, 80, 2, sp), frame(f"{n}_play", 19, 2, 0, 5000, 80, 5, sp),
-                 frame(f"{n}_sad", 15, 2, 0, 400, 80, 3, sp), frame(f"{n}_happy", 20, 2, 0, 8500, 80, 1, sp)])
+                 frame(f"{n}_sad", 14, 2, 0, 400, 80, 3, sp), frame(f"{n}_happy", 10, 6, 0, 8500, 80, 1, sp)])
 for fname, sel in (("pets.png", rows[:5]), ("eldritch.png", rows[5:])):
     sheet2 = Image.new("RGB", (260 * 4, 260 * len(sel)))
     for r_i, row in enumerate(sel):

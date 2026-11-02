@@ -19,7 +19,7 @@ A Tamagotchi-style pet whose activity follows the time of day.
 | 20:00 | Bath with a rubber duck | same |
 | 21:00 | Reading in bed | same |
 
-Battery is shown as 5 hearts. A green step bar fills toward 8,000 steps (gold when reached); the pet frowns and cries if you fall well behind pace after 11:00, and smiles once the goal is hit. All art is drawn with rectangles (no image assets).
+The scene is a 64x42 pixel grid (16x16 pet sprites with outlines, shading and glossy eyes; textured wallpaper and wood floors; beveled furniture; pet shadows). Battery is shown as 5 hearts. A green step bar fills toward 8,000 steps (gold when reached); the pet frowns and cries if you fall well behind pace after 11:00, and smiles once the goal is hit. All art is drawn with rectangles (no image assets).
 
 ### Build
 

@@ -48,15 +48,54 @@ static int OY;   // scene origin y on screen
 
 // ---------------------------------------------------------------- helpers
 
-static void box(GColor c, int x, int y, int w, int h) {
+// The scene is a 64x42 grid of "fine" pixels. Older scene code still thinks in
+// 32x21 "coarse" units (2x2 fine pixels each); box() bridges the two.
+#define FINE_W (SCENE_W * 2)
+#define FINE_H (SCENE_H * 2)
+#define FLOOR_FINE (FLOOR_Y * 2)
+
+static GColor s_floor_col;
+static bool s_floor_ok;     // room() sets this so pets can cast shadows
+
+// Lighten (d>0) or darken (d<0) a colour by stepping each 2-bit channel.
+static GColor shade(GColor c, int d) {
+  int r = (c.argb >> 4) & 3, gg = (c.argb >> 2) & 3, b = c.argb & 3;
+  r += d; gg += d; b += d;
+  if (r < 0) r = 0;
+  if (r > 3) r = 3;
+  if (gg < 0) gg = 0;
+  if (gg > 3) gg = 3;
+  if (b < 0) b = 0;
+  if (b > 3) b = 3;
+  return (GColor){.argb = (uint8_t)(0xC0 | (r << 4) | (gg << 2) | b)};
+}
+
+// Fill a rectangle in fine pixels, clipped to the scene.
+static void fbox(GColor c, int x, int y, int w, int h) {
+  if (x < 0) { w += x; x = 0; }
+  if (y < 0) { h += y; y = 0; }
+  if (x + w > FINE_W) w = FINE_W - x;
+  if (y + h > FINE_H) h = FINE_H - y;
+  if (w <= 0 || h <= 0) return;
   graphics_context_set_fill_color(g, c);
   graphics_fill_rect(g, GRect(OX + x * U, OY + y * U, w * U, h * U), 0, GCornerNone);
+}
+
+// Fill a rectangle in coarse units. Props get a light top edge and dark bottom
+// edge so flat boxes read as chunky 3D objects; big backdrops stay flat.
+static void box(GColor c, int x, int y, int w, int h) {
+  fbox(c, x * 2, y * 2, w * 2, h * 2);
+  if (w >= 2 && h >= 2 && w < 30) {
+    fbox(shade(c, 1), x * 2, y * 2, w * 2, 1);
+    fbox(shade(c, -1), x * 2, y * 2 + h * 2 - 1, w * 2, 1);
+    fbox(shade(c, -1), x * 2 + w * 2 - 1, y * 2 + 1, 1, h * 2 - 2);
+  }
 }
 
 static void txt(const char *s, const char *font_key, GColor c, int x, int y, int w, int h) {
   graphics_context_set_text_color(g, c);
   graphics_draw_text(g, s, fonts_get_system_font(font_key),
-                     GRect(OX + x * U, OY + y * U, w * U, h * U),
+                     GRect(OX + x * 2 * U, OY + y * 2 * U, w * 2 * U, h * 2 * U),
                      GTextOverflowModeFill, GTextAlignmentLeft, NULL);
 }
 
@@ -89,7 +128,7 @@ static void load_species(int id) {
   switch (id) {
     default:
     case 0:  // blob: pink blob
-      s_sp = (Species){GColorMelon, GColorShockingPink, GColorRed, GColorMelon, EARS_NUB};
+      s_sp = (Species){GColorMelon, GColorShockingPink, GColorSunsetOrange, GColorMelon, EARS_NUB};
       break;
     case 1:  // cat: orange tabby
       s_sp = (Species){GColorRajah, GColorOrange, GColorShockingPink, GColorRajah, EARS_CAT};
@@ -103,7 +142,7 @@ static void load_species(int id) {
     case 4:  // frog: green with eye bumps and a wide grin
       s_sp = (Species){GColorGreen, GColorIslamicGreen, GColorShockingPink, GColorGreen, EARS_FROG};
       break;
-    case 5:  // baby Cthulhu: bat wings and a wiggly tentacle beard
+    case 5:  // baby Cthulhu: bat wings (snout colour) and a wiggly tentacle beard
       s_sp = (Species){GColorMayGreen, GColorIslamicGreen, GColorMelon, GColorIndigo, EARS_CTHULHU};
       break;
     case 6:  // shoggoth: purple goo with too many eyes
@@ -125,215 +164,250 @@ static int s_bob;   // 1 = pet is standing and hops on odd frames
 
 static void px(int x, int y, GColor c) { box(c, x, y, 1, 1); }
 
-// The grown-up pet: 8 wide, 8 tall plus ears/extras around it.
+// Rounded body silhouette of the 16x16 pet: first/last column of each row.
+static const int8_t BODY_A[15] = {4, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 2, 3};
+static const int8_t BODY_B[15] = {11, 13, 14, 15, 15, 15, 15, 15, 15, 15, 15, 15, 14, 13, 12};
+
+static int imax(int a, int b) { return a > b ? a : b; }
+static int imin(int a, int b) { return a < b ? a : b; }
+
+// The grown-up pet: a 16x16 fine-pixel sprite (8x8 coarse) plus ears/extras.
 // mouth: 0 = closed, 1 = open (chewing / talking)
 static void pet(int x, int y, bool blink, int mouth) {
   if (s_bob && (s_tick & 1)) y -= 1;               // little hop
   if (s_sp.ears == EARS_EYE && (s_tick & 2)) y -= 1;   // the eye bobs in the air
-  GColor out = s_sp.out, body = s_sp.body;
-  // ears / bumps (drawn first so the head overlaps them)
-  switch (s_sp.ears) {
+  const int X = x * 2, Y = y * 2;
+#define F(c, dx, dy, w, h) fbox((c), X + (dx), Y + (dy), (w), (h))
+  const EarStyle k = s_sp.ears;
+  const GColor out = s_sp.out, body = s_sp.body;
+  const GColor hl = shade(body, 1), sh = shade(body, -1);
+  const int t = (int)(s_tick & 1);
+
+  // soft contact shadow on the floor
+  int gap = FLOOR_FINE - (Y + 16);
+  if (s_floor_ok && gap >= 0 && gap <= 2) {
+    fbox(shade(s_floor_col, -1), X + 2 + gap, FLOOR_FINE, 12 - 2 * gap, 2);
+  }
+
+  // ears / wings / crests, drawn first so the head overlaps them
+  switch (k) {
     case EARS_CAT:
-      box(out, x + 1, y - 1, 2, 1);  px(x + 1, y - 2, out);
-      box(out, x + 5, y - 1, 2, 1);  px(x + 6, y - 2, out);
+      F(out, 2, -2, 4, 3);  F(out, 2, -4, 2, 2);  F(s_sp.blush, 3, -1, 2, 1);
+      F(out, 10, -2, 4, 3); F(out, 12, -4, 2, 2); F(s_sp.blush, 11, -1, 2, 1);
       break;
     case EARS_BUNNY:
-      box(out, x + 1, y - 3, 2, 3);  px(x + 2, y - 2, s_sp.blush);
-      box(out, x + 5, y - 3, 2, 3);  px(x + 5, y - 2, s_sp.blush);
+      F(out, 3, -8, 4, 9);  F(s_sp.blush, 4, -7, 2, 6);
+      F(out, 9, -8 + (int)((s_tick % 9) == 0), 4, 9 - (int)((s_tick % 9) == 0));
+      F(s_sp.blush, 10, -7 + (int)((s_tick % 9) == 0), 2, 6);
       break;
     case EARS_BEAR:
-      box(out, x, y - 1, 2, 2);
-      box(out, x + 6, y - 1, 2, 2);
+      F(out, 1, -3, 4, 5);  F(s_sp.snout, 2, -2, 2, 2);
+      F(out, 11, -3, 4, 5); F(s_sp.snout, 12, -2, 2, 2);
       break;
     case EARS_FROG:
-      box(out, x + 1, y - 1, 2, 1);
-      box(out, x + 5, y - 1, 2, 1);
+      F(out, 2, -3, 5, 5);  F(out, 9, -3, 5, 5);
       break;
-    case EARS_CTHULHU: {
-      int fl = (int)(s_tick & 1);                      // flapping bat wings
-      box(s_sp.snout, x - 2, y + 1 + fl, 2, 3);      // wings use the 'snout' colour
-      box(s_sp.snout, x + 8, y + 1 + fl, 2, 3);
-      px(x - 1, y + fl, s_sp.snout);
-      px(x + 8, y + fl, s_sp.snout);
-      px(x + 2, y - 1, out);                           // tiny horns
-      px(x + 5, y - 1, out);
+    case EARS_CTHULHU:
+      F(s_sp.snout, -4, 3 + t, 4, 2);  F(s_sp.snout, -5, 5 + t, 5, 3);  F(s_sp.snout, -3, 8 + t, 3, 2);
+      F(s_sp.snout, 16, 3 + t, 4, 2);  F(s_sp.snout, 16, 5 + t, 5, 3);  F(s_sp.snout, 16, 8 + t, 3, 2);
+      F(shade(s_sp.snout, 1), -4, 5 + t, 2, 2);  F(shade(s_sp.snout, 1), 18, 5 + t, 2, 2);
+      F(out, 3, -2, 2, 3);  F(out, 11, -2, 2, 3);   // tiny horns
       break;
-    }
     case EARS_SHOGGOTH:
-      box(out, x + 2, y - 1, 2, 1);                    // goo lumps
-      px(x + 5, y - 1, out);
-      px(x + 6, y - 2 + (int)(s_tick & 1), out);
+      F(out, 3, -2, 4, 3);  F(out, 9, -2, 2, 3);
+      F(out, 11, -4 + t, 2, 5);  F(out, 6, -3, 2, 1);
       break;
     case EARS_DEEP:
-      px(x + 2, y - 1, out);                           // dorsal crest
-      box(out, x + 3, y - 2, 2, 1);
-      px(x + 5, y - 1, out);
+      F(out, 4, -3, 2, 4);  F(out, 6, -5, 4, 6);  F(out, 10, -3, 2, 4);
+      F(s_sp.blush, 7, -4, 2, 2);
       break;
     case EARS_EYE:
       break;
     default:
-      px(x + 1, y - 1, out);
-      px(x + 6, y - 1, out);
+      F(out, 2, -2, 3, 3);  F(out, 11, -2, 3, 3);
+      F(hl, 3, -1, 1, 1);   F(hl, 12, -1, 1, 1);
       break;
   }
-  // body: outline, then fill
-  box(out, x + 1, y, 6, 1);
-  box(out, x, y + 1, 8, 5);
-  box(out, x + 1, y + 6, 6, 1);
-  box(body, x + 1, y + 1, 6, 5);
-  box(body, x + 2, y + 6, 4, 1);
+
+  // body: outline, then inner fill, then shading
+  for (int r = 0; r < 15; r++) F(out, BODY_A[r], r, BODY_B[r] - BODY_A[r] + 1, 1);
+  for (int r = 1; r < 14; r++) {
+    int ia = imax(BODY_A[r], imax(BODY_A[r - 1], BODY_A[r + 1])) + 1;
+    int ib = imin(BODY_B[r], imin(BODY_B[r - 1], BODY_B[r + 1])) - 1;
+    F((r >= 12) ? sh : body, ia, r, ib - ia + 1, 1);
+  }
+  F(hl, 4, 2, 4, 1);  F(hl, 2, 3, 2, 1);  F(hl, 2, 4, 1, 2);       // glossy highlight
+  F(sh, 12, 6, 2, 5);                                               // shadow side
+
   // feet (the eldritch ones get tentacles/drips instead)
-  if (s_sp.ears < EARS_CTHULHU || s_sp.ears == EARS_DEEP) {
-    box(out, x + 1, y + 7, 2, 1);
-    box(out, x + 5, y + 7, 2, 1);
-  } else if (s_sp.ears == EARS_SHOGGOTH) {
-    for (int i = 1; i <= 6; i++) {
-      if (((int)s_tick + i) % 3 != 0) px(x + i, y + 7, out);   // dripping goo
+  if (k < EARS_CTHULHU || k == EARS_DEEP) {
+    F(out, 2, 15, 4, 1);  F(out, 10, 15, 4, 1);
+    F(hl, 3, 14, 1, 1);   F(hl, 11, 14, 1, 1);
+  } else if (k == EARS_SHOGGOTH) {
+    for (int i = 2; i <= 12; i += 3) {
+      if (((int)s_tick + i / 3) % 3 != 0) F(out, i, 15, 2, 1 + ((i / 3 + (int)s_tick) % 2));
     }
-  } else if (s_sp.ears == EARS_EYE) {
-    static const int tx[4] = {1, 3, 4, 6};
+  } else if (k == EARS_EYE) {
+    static const int tx[4] = {2, 5, 8, 11};
     for (int i = 0; i < 4; i++) {
-      if (((int)s_tick + i) & 1) px(x + tx[i], y + 7, out);    // dangling tendrils
-      px(x + tx[i], y + 6, out);
+      F(out, tx[i], 15, 2, 1);
+      if (((int)s_tick + i) & 1) F(out, tx[i] + 1, 16, 1, 1);
     }
   }
-  // extras: whiskers + wagging tail, bunny pom-pom, bear snout
-  if (s_sp.ears == EARS_CAT) {
-    px(x - 1, y + 3, GColorDarkGray);  px(x - 1, y + 5, GColorDarkGray);
-    px(x + 8, y + 3, GColorDarkGray);  px(x + 8, y + 5, GColorDarkGray);
-    box(out, x + 8, y + 6, 1, 2);
-    px(x + 9, y + 5 + (int)(s_tick & 1), out);
-  } else if (s_sp.ears == EARS_BUNNY) {
-    px(x - 1, y + 6, GColorWhite);
-    px(x - 1, y + 5, GColorWhite);
-  } else if (s_sp.ears == EARS_BEAR) {
-    box(s_sp.snout, x + 2, y + 4, 4, 2);
-  } else if (s_sp.ears == EARS_SHOGGOTH) {
-    // extra eyes blinking all over the goo
-    if (((int)s_tick + 0) % 4 != 0) px(x + 3, y + 1, GColorYellow);
-    if (((int)s_tick + 1) % 4 != 0) px(x + 6, y + 1, GColorGreen);
-    if (((int)s_tick + 2) % 4 != 0) px(x, y + 3, GColorYellow);
-    if (((int)s_tick + 3) % 4 != 0) px(x + 7, y + 4, GColorGreen);
-    if (((int)s_tick + 1) % 5 != 0) px(x + 4, y + 6, GColorYellow);
-  } else if (s_sp.ears == EARS_DEEP) {
-    // tail fin on the right and gill slits on the cheeks
-    box(out, x + 8, y + 5, 1, 3);
-    px(x + 9, y + 4, out);
-    px(x + 9, y + 7, out);
-    px(x + 8, y + 3, out);
+  // little arms
+  if (k != EARS_EYE && k != EARS_CTHULHU) {
+    F(out, -1, 9, 1, 3);  F(out, 16, 9, 1, 3);
   }
-  // big shiny eyes (2x2 each) or sleepy blink
-  if (s_sp.ears == EARS_EYE) {
+
+  // species extras
+  if (k == EARS_CAT) {
+    F(GColorDarkGray, -3, 8, 3, 1);  F(GColorDarkGray, -3, 11, 3, 1);        // whiskers
+    F(GColorDarkGray, 16, 8, 3, 1);  F(GColorDarkGray, 16, 11, 3, 1);
+    F(out, 16, 12, 2, 4);  F(out, 18, 10 + 2 * t, 2, 3);             // wagging tail
+    F(out, 7, 2, 1, 2);  F(out, 9, 2, 1, 2);  F(out, 5, 3, 1, 1);  F(out, 11, 3, 1, 1);  // stripes
+    F(GColorWhite, 6, 12, 4, 2);                                      // white chin
+  } else if (k == EARS_BUNNY) {
+    F(GColorWhite, -3, 11, 3, 3);  F(GColorLightGray, -3, 13, 3, 1);  // cotton tail
+  } else if (k == EARS_BEAR) {
+    F(s_sp.snout, 4, 9, 8, 5);  F(shade(s_sp.snout, 1), 5, 9, 3, 1);
+    F(GColorBlack, 7, 9, 2, 1);
+  } else if (k == EARS_SHOGGOTH) {
+    // extra eyes blinking all over the goo
+    if (((int)s_tick + 0) % 4 != 0) { F(GColorYellow, 6, 1, 2, 2);  F(GColorBlack, 7, 2, 1, 1); }
+    if (((int)s_tick + 1) % 4 != 0) { F(GColorGreen, 12, 2, 2, 2);  F(GColorBlack, 12, 3, 1, 1); }
+    if (((int)s_tick + 2) % 4 != 0) { F(GColorYellow, 0, 5, 2, 2);  F(GColorBlack, 1, 6, 1, 1); }
+    if (((int)s_tick + 3) % 4 != 0) { F(GColorGreen, 14, 9, 2, 2);  F(GColorBlack, 14, 10, 1, 1); }
+    if (((int)s_tick + 1) % 5 != 0) { F(GColorYellow, 2, 12, 2, 2);  F(GColorBlack, 3, 13, 1, 1); }
+  } else if (k == EARS_DEEP) {
+    F(out, 16, 10, 2, 6);  F(out, 18, 8, 2, 3);  F(out, 18, 14, 2, 3);  F(shade(out, 1), 16, 11, 1, 4);
+    F(out, 1, 9, 3, 1);  F(out, 1, 11, 3, 1);  F(out, 12, 9, 3, 1);  F(out, 12, 11, 3, 1);   // gills
+  }
+
+  // eyes
+  if (k == EARS_EYE) {
     // one giant eyeball: iris, slit pupil, shine; blinks with an eyelid
     if (blink) {
-      box(body, x + 2, y + 2, 4, 3);
-      box(GColorBlack, x + 2, y + 4, 4, 1);
+      F(body, 3, 4, 10, 6);
+      F(GColorBlack, 3, 9, 10, 1);  F(GColorBlack, 3, 10, 1, 1);  F(GColorBlack, 12, 10, 1, 1);
     } else {
-      box(GColorMagenta, x + 2, y + 2, 4, 4);
-      box(GColorBlack, x + 3, y + 2, 2, 4);
-      px(x + 2, y + 2, GColorWhite);
-      px(x + 3 + (int)((s_tick / 3) % 2), y + 3, GColorWhite);
+      F(GColorMagenta, 4, 4, 8, 8);  F(shade(GColorMagenta, -1), 4, 10, 8, 2);
+      F(GColorBlack, 6, 4, 4, 8);
+      F(GColorWhite, 5, 5, 2, 2);
+      F(GColorWhite, 8 + (int)((s_tick / 3) % 2), 8, 1, 1);
     }
-  } else if (s_sp.ears == EARS_DEEP && !blink && s_mood != MOOD_HAPPY) {
+    F(GColorRed, 2, 4, 1, 2);  F(GColorRed, 1, 5, 2, 1);   // bloodshot veins
+    F(GColorRed, 13, 9, 1, 3);  F(GColorMelon, 3, 11, 2, 1);
+  } else if (k == EARS_FROG) {
+    // eyes sit up on the bumps
+    F(GColorWhite, 3, -2, 3, 4);  F(GColorWhite, 10, -2, 3, 4);
+    if (blink) {
+      F(out, 3, -1, 3, 2);  F(out, 10, -1, 3, 2);
+    } else {
+      F(GColorBlack, 4, -1, 2, 3);  F(GColorBlack, 11, -1, 2, 3);
+      F(GColorWhite, 4, -1, 1, 1);  F(GColorWhite, 11, -1, 1, 1);
+    }
+  } else if (k == EARS_DEEP && !blink && s_mood != MOOD_HAPPY) {
     // big bulging fish eyes looking to the side
-    box(GColorWhite, x + 1, y + 2, 2, 2);
-    box(GColorWhite, x + 5, y + 2, 2, 2);
-    px(x + 2, y + 3, GColorBlack);
-    px(x + 6, y + 3, GColorBlack);
+    F(GColorWhite, 2, 4, 5, 5);  F(GColorWhite, 9, 4, 5, 5);
+    F(out, 3, 4, 3, 1);  F(out, 10, 4, 3, 1);
+    F(GColorBlack, 5, 6, 2, 2);  F(GColorBlack, 12, 6, 2, 2);
+    F(GColorWhite, 5, 6, 1, 1);  F(GColorWhite, 12, 6, 1, 1);
   } else if (blink) {
-    box(GColorBlack, x + 1, y + 3, 2, 1);
-    box(GColorBlack, x + 5, y + 3, 2, 1);
+    F(GColorBlack, 3, 7, 3, 1);  F(GColorBlack, 10, 7, 3, 1);
+    F(out, 2, 7, 1, 1);  F(out, 13, 7, 1, 1);
   } else if (s_mood == MOOD_HAPPY) {
-    px(x + 1, y + 3, GColorBlack);                 // happy ^ ^ eyes
-    px(x + 2, y + 2, GColorBlack);
-    px(x + 5, y + 2, GColorBlack);
-    px(x + 6, y + 3, GColorBlack);
+    F(GColorBlack, 3, 8, 1, 1);  F(GColorBlack, 4, 6, 2, 2);  F(GColorBlack, 6, 8, 1, 1);   // ^ ^
+    F(GColorBlack, 9, 8, 1, 1);  F(GColorBlack, 10, 6, 2, 2);  F(GColorBlack, 12, 8, 1, 1);
   } else {
-    box(GColorBlack, x + 1, y + 2, 2, 2);
-    box(GColorBlack, x + 5, y + 2, 2, 2);
-    px(x + 1, y + 2, GColorWhite);                 // eye shine
-    px(x + 5, y + 2, GColorWhite);
+    F(GColorBlack, 3, 5, 3, 4);  F(GColorBlack, 10, 5, 3, 4);
+    F(GColorWhite, 3, 5, 2, 1);  F(GColorWhite, 10, 5, 2, 1);        // big shine
+    F(GColorWhite, 5, 8, 1, 1);  F(GColorWhite, 12, 8, 1, 1);        // little shine
   }
+
   // blush
-  if (s_sp.ears == EARS_EYE) {
-    px(x + 1, y + 2, GColorRed);                    // bloodshot veins
-    px(x + 6, y + 5, GColorRed);
-    px(x + 1, y + 5, GColorMelon);
-  } else if (s_sp.ears == EARS_DEEP) {
-    px(x + 1, y + 4, out);                          // gill slits
-    px(x + 1, y + 5, out);
-    px(x + 6, y + 4, out);
-    px(x + 6, y + 5, out);
-  } else if (s_sp.ears != EARS_BEAR) {
-    px(x + 1, y + 4, s_sp.blush);
-    px(x + 6, y + 4, s_sp.blush);
+  if (k != EARS_EYE && k != EARS_DEEP && k != EARS_BEAR && k != EARS_FROG) {
+    F(s_sp.blush, 1, 10, 3, 1);   F(s_sp.blush, 12, 10, 3, 1);
+    F(shade(s_sp.blush, 1), 2, 9, 1, 1);  F(shade(s_sp.blush, 1), 13, 9, 1, 1);
+  } else if (k == EARS_FROG) {
+    F(s_sp.blush, 2, 10, 2, 1);  F(s_sp.blush, 12, 10, 2, 1);
   }
+
   // mouth
-  if (s_sp.ears == EARS_EYE) {
+  if (k == EARS_EYE) {
     // an eyeball has no mouth
   } else if (mouth) {
-    box(GColorRed, x + 3, y + 4, 2, 2);
+    F(GColorRed, 6, 10, 4, 3);  F(GColorShockingPink, 7, 12, 2, 1);  F(GColorBlack, 6, 10, 4, 1);
   } else if (s_mood == MOOD_SAD) {
-    box(GColorBlack, x + 3, y + 4, 2, 1);          // frown
-    px(x + 2, y + 5, GColorBlack);
-    px(x + 5, y + 5, GColorBlack);
+    F(GColorBlack, 6, 10, 4, 1);  F(GColorBlack, 5, 11, 1, 1);  F(GColorBlack, 10, 11, 1, 1);
   } else if (s_mood == MOOD_HAPPY) {
-    px(x + 2, y + 4, GColorBlack);                 // big smile
-    px(x + 5, y + 4, GColorBlack);
-    box(GColorBlack, x + 3, y + 5, 2, 1);
-  } else if (s_sp.ears == EARS_FROG) {
-    box(GColorBlack, x + 2, y + 5, 4, 1);          // wide froggy grin
-  } else if (s_sp.ears == EARS_SHOGGOTH) {
-    box(GColorBlack, x + 2, y + 5, 4, 1);          // toothy grin
-    px(x + 3, y + 5, GColorWhite);
-    px(x + 5, y + 5, GColorWhite);
-  } else if (s_sp.ears == EARS_DEEP) {
-    box(GColorShockingPink, x + 3, y + 5, 2, 1);   // pouty fish lips
+    F(GColorBlack, 5, 10, 1, 1);  F(GColorBlack, 10, 10, 1, 1);  F(GColorBlack, 6, 11, 4, 1);
+    F(GColorRed, 7, 11, 2, 1);
+  } else if (k == EARS_FROG) {
+    F(GColorBlack, 3, 11, 10, 1);  F(GColorBlack, 2, 10, 1, 1);  F(GColorBlack, 13, 10, 1, 1);
+  } else if (k == EARS_SHOGGOTH) {
+    F(GColorBlack, 3, 10, 10, 3);                               // toothy grin
+    F(GColorWhite, 4, 10, 1, 1);  F(GColorWhite, 7, 10, 2, 1);  F(GColorWhite, 11, 10, 1, 1);
+    F(GColorWhite, 5, 12, 1, 1);  F(GColorWhite, 10, 12, 1, 1);
+  } else if (k == EARS_DEEP) {
+    F(GColorShockingPink, 5, 11, 6, 2);  F(shade(GColorShockingPink, 1), 6, 11, 2, 1);
   } else {
-    px(x + 3, y + 4, GColorBlack);                 // tiny "w" mouth / nose
-    px(x + 4, y + 4, GColorBlack);
+    F(GColorBlack, 7, 10, 2, 1);                                // tiny "w" mouth
+    F(GColorBlack, 6, 9, 1, 1);  F(GColorBlack, 9, 9, 1, 1);
+    if (k == EARS_BUNNY) F(GColorWhite, 7, 11, 2, 1);
   }
-  if (s_sp.ears == EARS_CTHULHU) {
+
+  if (k == EARS_CTHULHU) {
     // wiggling tentacle beard that also serves as feet
-    int w = (int)(s_tick & 1);
-    box(out, x + 2, y + 5, 1, 2 + w);
-    box(out, x + 3, y + 5, 1, 3 - w);
-    box(out, x + 4, y + 5, 1, 2 + w);
-    box(out, x + 5, y + 5, 1, 3 - w);
+    F(out, 3, 12, 2, 3 + t);   F(out, 5, 12, 2, 4 - t);
+    F(out, 7, 12, 2, 3 + t);   F(out, 9, 12, 2, 4 - t);   F(out, 11, 12, 2, 3 + t);
+    F(shade(out, 1), 3, 13, 1, 1);  F(shade(out, 1), 7, 13, 1, 1);  F(shade(out, 1), 11, 13, 1, 1);
   }
+
   if (s_mood == MOOD_SAD) {
-    box(GColorPictonBlue, x + 2, y + 4, 1, 1 + (int)(s_tick & 1));   // tear
+    F(GColorPictonBlue, 4, 9, 1, 2 + t);                  // tear
+    F(GColorWhite, 4, 9, 1, 1);
     // little rain cloud overhead
-    int cy = y - (s_sp.ears == EARS_BUNNY ? 7 : 4);
-    box(GColorLightGray, x + 1, cy, 6, 2);
-    box(GColorLightGray, x + 2, cy - 1, 3, 1);
-    px(x + 2 + 2 * (int)(s_tick & 1), cy + 2, GColorPictonBlue);
-    px(x + 5 - 2 * (int)(s_tick & 1), cy + 2, GColorPictonBlue);
+    int cy = (k == EARS_BUNNY) ? -16 : -10;
+    F(GColorLightGray, 3, cy + 2, 10, 3);  F(GColorLightGray, 5, cy, 6, 2);
+    F(GColorWhite, 4, cy + 2, 3, 1);
+    F(GColorPictonBlue, 5 + 4 * t, cy + 5, 1, 2);
+    F(GColorPictonBlue, 10 - 4 * t, cy + 5, 1, 2);
   } else if (s_mood == MOOD_HAPPY) {
     // twinkling sparkles
-    int sx = (s_tick & 1) ? x + 8 : x - 1;
-    int sy = y - (s_sp.ears == EARS_BUNNY ? 6 : 5);
-    box(GColorYellow, sx, sy, 1, 3);
-    box(GColorYellow, sx - 1, sy + 1, 3, 1);
-    px(sx, sy + 1, GColorWhite);
+    int sx = t ? 16 : -3;
+    int sy = (k == EARS_BUNNY) ? -12 : -9;
+    F(GColorYellow, sx + 1, sy, 1, 5);  F(GColorYellow, sx - 1, sy + 2, 5, 1);
+    F(GColorWhite, sx + 1, sy + 2, 1, 1);
+    F(GColorYellow, sx + 6 - 2 * t, sy + 6, 1, 3);  F(GColorYellow, sx + 5 - 2 * t, sy + 7, 3, 1);
   }
+#undef F
 }
 
-// A smaller kid blob: 5 wide, 4 tall, with a tuft of hair on top.
+// A smaller kid blob: 10x8 fine pixels with a tuft of hair and shading.
 static void kid(int x, int y, GColor c, bool happy) {
-  px(x + 2, y - 1, GColorRed);                     // hair tuft
-  box(c, x + 1, y, 3, 1);
-  box(c, x, y + 1, 5, 2);
-  box(c, x + 1, y + 3, 3, 1);
-  px(x + 1, y + 1, GColorBlack);
-  px(x + 3, y + 1, GColorBlack);
-  px(x, y + 2, GColorMelon);                       // blush
-  px(x + 4, y + 2, GColorMelon);
+  const int X = x * 2, Y = y * 2;
+#define K(col, dx, dy, w, h) fbox((col), X + (dx), Y + (dy), (w), (h))
+  static const int8_t A[8] = {2, 1, 0, 0, 0, 0, 1, 2};
+  static const int8_t B[8] = {7, 8, 9, 9, 9, 9, 8, 7};
+  GColor o = shade(c, -1);
+  // tuft
+  K(GColorRed, 4, -3, 2, 3);  K(GColorRed, 6, -2, 1, 1);  K(shade(GColorRed, 1), 4, -3, 1, 1);
+  for (int r = 0; r < 8; r++) K(o, A[r], r, B[r] - A[r] + 1, 1);
+  for (int r = 1; r < 7; r++) K(c, A[r] + 1, r, B[r] - A[r] - 1, 1);
+  K(shade(c, 1), 2, 1, 3, 1);  K(shade(c, 1), 1, 2, 1, 2);
+  // eyes with shine
+  K(GColorBlack, 2, 3, 2, 2);  K(GColorBlack, 6, 3, 2, 2);
+  K(GColorWhite, 2, 3, 1, 1);  K(GColorWhite, 6, 3, 1, 1);
+  // blush + mouth
+  K(GColorMelon, 1, 5, 1, 1);  K(GColorMelon, 8, 5, 1, 1);
   if (happy) {
-    px(x + 2, y + 2, GColorRed);                   // open smile
+    K(GColorRed, 4, 5, 2, 2);  K(GColorBlack, 4, 5, 2, 1);
   } else {
-    px(x + 2, y + 2, GColorBlack);
+    K(GColorBlack, 4, 5, 2, 1);
   }
+  // feet
+  K(o, 2, 7, 2, 1);  K(o, 6, 7, 2, 1);
+#undef K
 }
 
 // A small cloud drifting across a window (x0..x0+w-1 at row y0).
@@ -344,8 +418,25 @@ static void cloud(int x0, int y0, int w) {
 }
 
 static void room(GColor wall, GColor floor_c) {
-  box(wall, 0, 0, SCENE_W, FLOOR_Y);
-  box(floor_c, 0, FLOOR_Y, SCENE_W, SCENE_H - FLOOR_Y);
+  // wallpaper with soft vertical stripes and a baseboard
+  int bright = ((wall.argb >> 4) & 3) + ((wall.argb >> 2) & 3) + (wall.argb & 3);
+  GColor stripe = shade(wall, bright >= 5 ? -1 : 1);
+  fbox(wall, 0, 0, FINE_W, FLOOR_FINE);
+  for (int x = 2; x < FINE_W; x += 8) fbox(stripe, x, 0, 2, FLOOR_FINE - 2);
+  fbox(shade(wall, bright >= 5 ? -1 : 1), 0, FLOOR_FINE - 2, FINE_W, 2);
+  fbox(shade(wall, bright >= 5 ? -2 : 2), 0, FLOOR_FINE - 1, FINE_W, 1);
+  // wooden floor: planks with staggered joints
+  fbox(floor_c, 0, FLOOR_FINE, FINE_W, FINE_H - FLOOR_FINE);
+  fbox(shade(floor_c, 1), 0, FLOOR_FINE, FINE_W, 1);
+  GColor line = shade(floor_c, -1);
+  for (int row = 0; row < 3; row++) {
+    int yy = FLOOR_FINE + 2 + row * 3;
+    if (yy >= FINE_H) break;
+    fbox(line, 0, yy, FINE_W, 1);
+    for (int x = (row * 7) % 13; x < FINE_W; x += 13) fbox(line, x, yy - 2, 1, 2);
+  }
+  s_floor_col = floor_c;
+  s_floor_ok = true;
 }
 
 // ----------------------------------------------------------------- scenes
@@ -810,16 +901,17 @@ static void canvas_update(Layer *layer, GContext *ctx) {
 
   // scene frame + scene
   g = ctx;
-  U = w / 43;
+  U = w / 86;
   if (U < 1) U = 1;
-  OX = (w - SCENE_W * U) / 2;
+  OX = (w - FINE_W * U) / 2;
   OY = h * 74 / 260;
 
   graphics_context_set_fill_color(ctx, GColorShockingPink);
-  graphics_fill_rect(ctx, GRect(OX - U, OY - U, (SCENE_W + 2) * U, (SCENE_H + 2) * U),
-                     3 * U, GCornersAll);
+  graphics_fill_rect(ctx, GRect(OX - 2 * U, OY - 2 * U, (FINE_W + 4) * U, (FINE_H + 4) * U),
+                     6 * U, GCornersAll);
 
   s_bob = 0;
+  s_floor_ok = false;
   switch (pick_activity(s_hour, s_min, s_wday)) {
     case ACT_SLEEP:  scene_sleep();       break;
     case ACT_WAKE:   scene_wake();        break;
