@@ -199,7 +199,7 @@ static void pet(int x, int y, bool blink, int mouth) {
   // soft contact shadow on the floor
   int gap = FLOOR_FINE - (Y + 16);
   if (!sl && s_floor_ok && gap >= 0 && gap <= 2) {
-    fbox(shade(s_floor_col, -1), X + 2 + gap, FLOOR_FINE, 12 - 2 * gap, 2);
+    fbox(shade(s_floor_col, -1), X + 3 + gap, FLOOR_FINE + 1, 10 - 2 * gap, 1);
   }
 
   // ears / wings / crests, drawn first so the head overlaps them
@@ -448,6 +448,30 @@ static void cloud(int x0, int y0, int w) {
   px(cx + 1, y0 - 1, GColorWhite);
 }
 
+// Daytime window, drawn in two passes so a sun/cloud can sit behind the bars:
+// window_glass() = frame + sky + hills, window_frame() = bars, sill, curtains.
+static void window_glass(int x, int y, int w, int h) {
+  int X = x * 2, Y = y * 2, W = w * 2, H = h * 2;
+  fbox(GColorWhite, X, Y, W, H);
+  fbox(GColorCeleste, X + 2, Y + 2, W - 4, H - 4);
+  fbox(shade(GColorCeleste, -1), X + 2, Y + H - 7, W - 4, 5);
+  fbox(GColorMayGreen, X + 2, Y + H - 5, W - 4, 3);                 // far hills
+  fbox(GColorMayGreen, X + 4, Y + H - 7, 6, 2);
+  fbox(GColorIslamicGreen, X + 2, Y + H - 3, W - 4, 1);
+}
+
+static void window_frame(int x, int y, int w, int h) {
+  int X = x * 2, Y = y * 2, W = w * 2, H = h * 2;
+  fbox(GColorWhite, X + W / 2 - 1, Y, 2, H);                        // bars
+  fbox(GColorWhite, X, Y + H / 2 - 1, W, 2);
+  fbox(GColorLightGray, X - 2, Y + H, W + 4, 2);                    // sill
+  fbox(GColorDarkGray, X - 3, Y - 3, W + 6, 1);                     // curtain rod
+  fbox(GColorMelon, X - 2, Y - 2, 4, H + 2);                        // curtains
+  fbox(GColorMelon, X + W - 2, Y - 2, 4, H + 2);
+  fbox(shade(GColorMelon, -1), X - 1, Y, 1, H);
+  fbox(shade(GColorMelon, -1), X + W, Y, 1, H);
+}
+
 static void room(GColor wall, GColor floor_c) {
   // wallpaper with soft vertical stripes and a baseboard
   int bright = ((wall.argb >> 4) & 3) + ((wall.argb >> 2) & 3) + (wall.argb & 3);
@@ -508,11 +532,10 @@ static void scene_sleep(void) {
 static void scene_wake(void) {
   room(GColorPastelYellow, GColorRajah);
   // window with rising sun
-  box(GColorWhite, 2, 2, 9, 9);
-  box(GColorCeleste, 3, 3, 7, 7);
-  box(GColorYellow, 5, 5, 3, 3);
-  cloud(3, 4, 7);
-  box(GColorWhite, 6, 2, 1, 9);
+  window_glass(2, 2, 9, 9);
+  box(GColorYellow, 7, 4, 3, 3);
+  cloud(3, 4, 4);
+  window_frame(2, 2, 9, 9);
   // stretching pet
   int pxx = 14, pyy = 10;
   s_bob = 1;
@@ -533,39 +556,67 @@ static void scene_wake(void) {
 
 static void scene_code(void) {
   room(GColorBabyBlueEyes, GColorDarkGray);
-  // plant
-  box(GColorIslamicGreen, 29, 10, 3, 6);
-  box(GColorWindsorTan, 29, 16, 3, 2);
-  // chair (back visible behind the pet)
-  box(GColorBulgarianRose, 1, 8, 2, 8);
-  box(GColorBulgarianRose, 2, 15, 8, 1);
-  box(GColorDarkGray, 5, 16, 1, 3);
-  box(GColorBlack, 3, 19, 6, 1);
+  const int t = (int)(s_tick & 1);
+  // wall clock that really shows the quarter hour, with a red tick
+  fbox(GColorDarkGray, 35, 2, 6, 4);  fbox(GColorDarkGray, 36, 1, 4, 6);
+  fbox(GColorWhite, 36, 2, 4, 4);
+  fbox(GColorBlack, 37, 3, 1, 1);
+  static const int mx[4] = {37, 38, 37, 36};
+  static const int my[4] = {2, 3, 4, 3};
+  int q = (s_min / 15) % 4;
+  fbox(GColorBlack, mx[q], my[q], 1, 1);
+  fbox(GColorRed, 38, 5, 1, 1);
+  // landscape poster
+  fbox(GColorWindsorTan, 53, 2, 10, 12);
+  fbox(GColorWhite, 54, 3, 8, 10);
+  fbox(GColorCeleste, 55, 4, 6, 4);
+  fbox(GColorGreen, 55, 8, 6, 4);
+  fbox(GColorYellow, 58, 5, 2, 2);
+  fbox(GColorIslamicGreen, 55, 10, 3, 2);
+  // plant with leaves
+  fbox(GColorIslamicGreen, 61, 24, 1, 6);
+  fbox(GColorGreen, 59, 25, 2, 2);  fbox(GColorGreen, 62, 24, 2, 2);
+  fbox(GColorIslamicGreen, 59, 22, 2, 2);  fbox(GColorIslamicGreen, 62, 27, 2, 2);
+  fbox(GColorWindsorTan, 60, 30, 4, 6);  fbox(shade(GColorWindsorTan, 1), 60, 30, 4, 1);
+  // chair: back, seat, stem and wheels
+  fbox(GColorBulgarianRose, 1, 16, 4, 16);  fbox(shade(GColorBulgarianRose, 1), 1, 16, 4, 1);
+  fbox(GColorBulgarianRose, 3, 30, 17, 3);  fbox(shade(GColorBulgarianRose, 1), 3, 30, 17, 1);
+  fbox(GColorDarkGray, 10, 33, 2, 3);
+  fbox(GColorDarkGray, 5, 36, 12, 1);
+  fbox(GColorBlack, 5, 37, 2, 1);  fbox(GColorBlack, 15, 37, 2, 1);
   // pet sitting at the desk
   pet(2, 7, (s_tick % 7) == 0, 0);
-  // monitor
-  box(GColorDarkGray, 17, 12, 3, 2);
-  box(GColorDarkGray, 12, 4, 13, 9);
-  box(GColorBlack, 13, 5, 11, 7);
-  static const GColor code_cols[3] = {GColorGreen, GColorCyan, GColorYellow};
-  for (int i = 0; i < 3; i++) {
-    int w = 2 + ((s_tick / 2 + i * 3) % 5);
-    int x = 14 + ((i + s_tick / 6) % 3);
-    box(code_cols[i], x, 6 + i * 2, w, 1);
+  // monitor: bezel, screen with syntax-coloured code, status LED, stand
+  fbox(GColorDarkGray, 24, 8, 26, 18);  fbox(shade(GColorDarkGray, 1), 24, 8, 26, 1);
+  fbox(GColorBlack, 26, 10, 22, 13);
+  static const GColor c1[3] = {GColorGreen, GColorCyan, GColorYellow};
+  static const GColor c2[3] = {GColorMagenta, GColorWhite, GColorLightGray};
+  for (int i = 0; i < 5; i++) {
+    int x = 27 + (int)(((unsigned)i + s_tick / 6) % 3) * 2;
+    int w1 = 2 + (int)((s_tick / 2 + (unsigned)i) % 3);
+    fbox(c1[i % 3], x, 11 + i * 2, w1, 1);
+    fbox(c2[(i + 1) % 3], x + w1 + 1, 11 + i * 2, 2 + (int)((s_tick / 3 + (unsigned)i * 2) % 4), 1);
   }
-  if (s_tick & 1) {
-    box(GColorWhite, 14, 11, 1, 1);               // blinking cursor
-  }
-  // desk, keyboard, typing hands
-  box(GColorLightGray, 13, 13, 8, 1);
-  box(PET_OUT, 10, 12 + (s_tick & 1), 3, 1);
-  box(GColorWindsorTan, 10, 14, 19, 2);
-  box(GColorWindsorTan, 11, 16, 2, 4);
-  box(GColorWindsorTan, 26, 16, 2, 4);
+  if (t) fbox(GColorWhite, 27, 21, 2, 1);                           // blinking cursor
+  fbox(GColorGreen, 48, 24, 1, 1);                                  // power LED
+  fbox(GColorDarkGray, 36, 26, 4, 1);  fbox(GColorDarkGray, 34, 27, 8, 1);
+  // keyboard, mouse and the pet's typing arms
+  fbox(GColorLightGray, 24, 26, 12, 2);
+  for (int kx = 25; kx < 35; kx += 2) fbox(GColorWhite, kx, 26, 1, 1);
+  fbox(GColorDarkGray, 25, 27, 10, 1);
+  fbox(GColorWhite, 42, 27, 3, 1);  fbox(GColorLightGray, 42, 27, 1, 1);
+  fbox(PET_OUT, 19, 25 + t, 7, 2);
+  // desk with a drawer
+  fbox(GColorWindsorTan, 20, 28, 40, 3);
+  fbox(shade(GColorWindsorTan, 1), 20, 28, 40, 1);
+  fbox(shade(GColorWindsorTan, -1), 20, 30, 40, 1);
+  fbox(GColorWindsorTan, 22, 31, 3, 5);  fbox(GColorWindsorTan, 55, 31, 3, 5);
+  fbox(shade(GColorWindsorTan, -1), 40, 31, 12, 4);
+  fbox(GColorWindsorTan, 41, 32, 10, 2);  fbox(GColorRajah, 45, 33, 2, 1);
   // coffee mug with steam
-  box(GColorWhite, 26, 12, 2, 2);
-  box(GColorWhite, 28, 12, 1, 1);
-  box(GColorLightGray, 26 + (s_tick & 1), 10, 1, 1);
+  fbox(GColorWhite, 52, 23, 5, 5);  fbox(GColorWindsorTan, 53, 23, 3, 1);
+  fbox(GColorWhite, 57, 24, 1, 3);  fbox(GColorLightGray, 52, 27, 5, 1);
+  fbox(GColorLightGray, 53 + t, 21, 1, 1);  fbox(GColorLightGray, 55 - t, 19, 1, 1);
 }
 
 
@@ -810,9 +861,9 @@ static void table_scene(bool family) {
   room(GColorPastelYellow, GColorRajah);
   int mouth = (s_tick & 1);
   // window
-  box(GColorWhite, 12, 2, 8, 7);
-  box(GColorCeleste, 13, 3, 6, 5);
-  cloud(13, 5, 5);
+  window_glass(12, 2, 8, 7);
+  cloud(13, 4, 5);
+  window_frame(12, 2, 8, 7);
   pet(2, 7, (s_tick % 7) == 0, mouth);
   if (family) {
     kid(19, 11, GColorCyan, mouth);
@@ -838,9 +889,9 @@ static void table_scene(bool family) {
 static void scene_play(void) {
   room(GColorMintGreen, GColorRajah);
   // window
-  box(GColorWhite, 12, 2, 8, 7);
-  box(GColorCeleste, 13, 3, 6, 5);
-  cloud(13, 5, 5);
+  window_glass(12, 2, 8, 7);
+  cloud(13, 4, 5);
+  window_frame(12, 2, 8, 7);
   // family
   s_bob = 1;
   pet(2, 10, (s_tick % 7) == 0, 0);
