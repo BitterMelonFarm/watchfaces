@@ -62,7 +62,7 @@ int main(int argc, char **argv) {
   if (argc < 13) return 1;
   s_hour = atoi(argv[1]); s_min = atoi(argv[2]); s_sec = atoi(argv[3]); s_wday = atoi(argv[4]);
   s_mday = atoi(argv[5]); s_mon = atoi(argv[6]); s_steps = atoi(argv[7]); s_batt = atoi(argv[8]);
-  s_tick = (uint32_t)atoi(argv[9]); load_theme(atoi(argv[10]));
+  s_tick = (uint32_t)atoi(argv[9]); s_theme = atoi(argv[10]); load_theme(s_theme);
   s_glitch_until = s_tick + (uint32_t)atoi(argv[11]);
   s_24h = atoi(argv[12]) != 0;
   canvas_update(NULL, NULL);

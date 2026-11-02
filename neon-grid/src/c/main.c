@@ -81,20 +81,6 @@ static uint32_t hash2(uint32_t a, uint32_t b) {
 }
 
 // ---------------------------------------------------------------- fonts
-// 5x7 digits for the big time.
-static const char *BIG[10][7] = {
-  {"01110", "10001", "10011", "10101", "11001", "10001", "01110"},
-  {"00100", "01100", "00100", "00100", "00100", "00100", "01110"},
-  {"01110", "10001", "00001", "00010", "00100", "01000", "11111"},
-  {"11110", "00001", "00001", "01110", "00001", "00001", "11110"},
-  {"00010", "00110", "01010", "10010", "11111", "00010", "00010"},
-  {"11111", "10000", "11110", "00001", "00001", "10001", "01110"},
-  {"00110", "01000", "10000", "11110", "10001", "10001", "01110"},
-  {"11111", "00001", "00010", "00100", "01000", "01000", "01000"},
-  {"01110", "10001", "10001", "01110", "10001", "10001", "01110"},
-  {"01110", "10001", "10001", "01111", "00001", "00010", "01100"},
-};
-
 // 3x5 micro font (15 bits, row-major) for labels.
 typedef struct { char ch; const char *bits; } Glyph;
 static const Glyph MICRO[] = {
@@ -174,6 +160,16 @@ static void draw_city(void) {
       }
     }
   }
+  // hover-cars slipping through the alleys (hidden when they pass behind a tower)
+  for (int i = 0; i < 3; i++) {
+    int x = (int)(((s_tick * (5 + 3 * (uint32_t)i)) + 97 * (uint32_t)i) % 300) - 24;
+    if (i == 1) x = 260 - x;                                    // this one flies the other way
+    int y = 204 + i * 14;
+    int dir = (i == 1) ? -1 : 1;
+    R(s_th.near_b, x, y, 10, 3);
+    R(s_th.acc, dir > 0 ? x + 10 : x - 2, y, 2, 1);               // headlight
+    R(s_th.sec, dir > 0 ? x - 6 : x + 10, y + 1, 6, 1);           // light trail
+  }
   // near skyline: darker, with brighter windows
   for (size_t i = 0; i < sizeof(NEAR_B) / sizeof(NEAR_B[0]); i++) {
     const Bldg *b = &NEAR_B[i];
@@ -219,6 +215,21 @@ static void draw_rain(void) {
   }
 }
 
+// MATRIX theme: falling columns of code instead of rain.
+static void draw_code_rain(void) {
+  static const char GLYPHS[] = "0123456789ABCDEFXZ";
+  for (int i = 0; i < 26; i++) {
+    int x = 4 + i * 10;
+    int head = (int)((hash2((uint32_t)i, 9) % 300 + s_tick * (7 + (uint32_t)(i % 5) * 2)) % 320) - 30;
+    for (int k = 0; k < 9; k++) {
+      int y = head - k * 7;
+      if (y < -6 || y > 258) continue;
+      char buf[2] = {GLYPHS[hash2((uint32_t)(i * 13 + k), s_tick / 2 + (uint32_t)k) % (sizeof(GLYPHS) - 1)], 0};
+      micro(buf, x, y, 1, k == 0 ? GColorWhite : (k < 3 ? s_th.pri : (k < 6 ? s_th.sec : s_th.rain)));
+    }
+  }
+}
+
 static void draw_scanlines(void) {
   for (int y = 1; y < 260; y += 4) R(s_th.sky[0], 0, y, 260, 1);
   int sweep = (int)((s_tick * 13) % 280) - 10;                  // slow scanning bar
@@ -227,24 +238,46 @@ static void draw_scanlines(void) {
 }
 
 // ---------------------------------------------------------------- time
+// Neon-tube digits: chamfered 7-segment shapes on a 7x11 cell grid, each segment
+// drawn as a dim glow halo, a coloured tube and a white-hot core.
 
 static bool glitching(void) {
   return (s_tick % 8) == 0 || s_glitch_until > s_tick;
 }
 
-static int row_shift(int row) {
-  if (!glitching()) return 0;
-  int band = (int)((s_tick * 3) % 7);
-  if (row == band) return (s_tick & 1) ? 6 : -6;               // one torn scanline row
-  return 0;
+static const uint8_t SEG[10] = {0x3F, 0x06, 0x5B, 0x4F, 0x66, 0x6D, 0x7D, 0x07, 0x7F, 0x6F};
+typedef struct { int8_t x, y, w, h; } SegRect;
+static const SegRect SEGR[7] = {      // a, b, c, d, e, f, g
+  {1, 0, 5, 1}, {6, 1, 1, 4}, {6, 6, 1, 4}, {1, 10, 5, 1},
+  {0, 6, 1, 4}, {0, 1, 1, 4}, {1, 5, 5, 1},
+};
+
+// pass 0 = glow halo, 1 = tube colour, 2 = white core
+static void seg_pass(int d, int x, int y, int sc, int pass, GColor tube) {
+  for (int i = 0; i < 7; i++) {
+    if (!(SEG[d] & (1 << i))) continue;
+    int rx = x + SEGR[i].x * sc, ry = y + SEGR[i].y * sc;
+    int rw = SEGR[i].w * sc, rh = SEGR[i].h * sc;
+    bool horiz = SEGR[i].w > SEGR[i].h;
+    if (pass == 0) R(s_th.rain, rx - 3, ry - 3, rw + 6, rh + 6);
+    else if (pass == 1) R(tube, rx - 1, ry - 1, rw + 2, rh + 2);
+    else if (horiz) R(GColorWhite, rx + 1, ry + 1, rw - 2, rh - 2);
+    else R(GColorWhite, rx + 1, ry + 1, rw - 2, rh - 2);
+  }
 }
 
-static void big_digit(int d, int x, int y, int sc, GColor c) {
-  for (int r = 0; r < 7; r++) {
-    int off = row_shift(r);
-    for (int k = 0; k < 5; k++) {
-      if (BIG[d][r][k] == '1') R(c, x + k * sc + off, y + r * sc, sc, sc);
-    }
+static void tube_digit(int d, int x, int y, int sc, bool glow) {
+  if (glow) seg_pass(d, x, y, sc, 0, s_th.pri);
+  seg_pass(d, x, y, sc, 1, s_th.pri);
+  seg_pass(d, x, y, sc, 2, s_th.pri);
+}
+
+static void tube_colon(int cx, int y, bool glow) {
+  for (int k = 0; k < 2; k++) {
+    int yy = y + (k ? 28 : 12);
+    if (glow) R(s_th.rain, cx - 5, yy - 2, 10, 10);
+    R(s_th.pri, cx - 3, yy, 6, 6);
+    R(GColorWhite, cx - 1, yy + 2, 2, 2);
   }
 }
 
@@ -256,20 +289,25 @@ static void draw_time(void) {
   }
   int dg[4] = {hour / 10, hour % 10, s_min / 10, s_min % 10};
   if (!s_24h && dg[0] == 0) dg[0] = -1;                         // no leading zero in 12h mode
-  const int sc = 6, ty = 62;
-  const int xs[4] = {52, 88, 148, 184};                         // digit, digit, [colon], digit, digit
-  // chromatic-aberration ghosts first, then the white core on top
-  for (int layer = 0; layer < 3; layer++) {
-    GColor c = layer == 0 ? s_th.sec : (layer == 1 ? s_th.pri : GColorWhite);
-    int dx = layer == 0 ? -3 : (layer == 1 ? 3 : 0);
+  const int sc = 4, ty = 60;
+  const int xs[4] = {52, 88, 144, 180};
+  bool gl = glitching();
+  int torn = gl ? (int)(s_tick % 4) : -1;                       // which digit slips sideways
+  // chromatic-aberration ghosts while glitching
+  if (gl) {
     for (int i = 0; i < 4; i++) {
-      if (dg[i] >= 0) big_digit(dg[i], xs[i] + dx, ty, sc, c);
-    }
-    if (!(s_tick & 1) || !s_in_focus) {                         // blinking colon
-      R(c, 126 + dx, ty + 2 * sc, sc, sc);
-      R(c, 126 + dx, ty + 4 * sc, sc, sc);
+      if (dg[i] < 0) continue;
+      int off = (i == torn) ? ((s_tick & 1) ? 6 : -6) : 0;
+      seg_pass(dg[i], xs[i] + off - 3, ty, sc, 1, s_th.sec);
+      seg_pass(dg[i], xs[i] + off + 3, ty, sc, 1, s_th.acc);
     }
   }
+  for (int i = 0; i < 4; i++) {
+    if (dg[i] < 0) continue;
+    int off = (gl && i == torn) ? ((s_tick & 1) ? 6 : -6) : 0;
+    tube_digit(dg[i], xs[i] + off, ty, sc, true);
+  }
+  if (!(s_tick & 1) || !s_in_focus) tube_colon(130, ty, true);   // blinking colon
   // HUD brackets around the time
   R(s_th.pri, 33, 56, 3, 52);  R(s_th.pri, 33, 56, 9, 3);  R(s_th.pri, 33, 105, 9, 3);
   R(s_th.pri, 224, 56, 3, 52); R(s_th.pri, 218, 56, 9, 3); R(s_th.pri, 218, 105, 9, 3);
@@ -323,7 +361,7 @@ static void canvas_update(Layer *layer, GContext *ctx) {
   g = ctx;
   R(s_th.sky[0], 0, 0, 260, 260);
   draw_city();
-  draw_rain();
+  if (s_theme == 2) draw_code_rain(); else draw_rain();
   draw_scanlines();
   draw_time();
   draw_hud();
