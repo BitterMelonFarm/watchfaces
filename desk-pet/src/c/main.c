@@ -499,34 +499,47 @@ static void room(GColor wall, GColor floor_c) {
 static void scene_sleep(void) {
   GColor wall = GColorOxfordBlue;
   room(wall, GColorImperialPurple);
-  // moon
-  box(GColorPastelYellow, 24, 3, 4, 4);
-  box(wall, 25, 2, 3, 3);
-  // twinkling stars
-  for (int i = 0; i < 4; i++) {
-    static const int sx[4] = {5, 12, 18, 21};
-    static const int sy[4] = {3, 6, 2, 8};
-    if (((s_tick + i) % 3) != 0) {
-      box(GColorWhite, sx[i], sy[i], 1, 1);
-    }
+  const int t = (int)(s_tick & 1);
+  // crescent moon with craters
+  fbox(GColorPastelYellow, 49, 6, 6, 8);  fbox(GColorPastelYellow, 48, 7, 8, 6);
+  fbox(wall, 52, 5, 6, 7);
+  fbox(shade(GColorPastelYellow, -1), 49, 9, 1, 1);  fbox(shade(GColorPastelYellow, -1), 50, 12, 1, 1);
+  // twinkling stars (some sparkle into a cross)
+  static const int sx[5] = {8, 22, 34, 42, 58};
+  static const int sy[5] = {6, 12, 4, 16, 12};
+  for (int i = 0; i < 5; i++) {
+    int ph = (int)((s_tick + (unsigned)i) % 4);
+    if (ph == 0) continue;
+    fbox(GColorWhite, sx[i], sy[i], 1, 1);
+    if (ph == 2) { fbox(GColorWhite, sx[i] - 1, sy[i], 3, 1);  fbox(GColorWhite, sx[i], sy[i] - 1, 1, 3); }
   }
-  // bed with the sleeping pet's head on the pillow
-  box(GColorWindsorTan, 5, 18, 22, 2);
-  box(GColorWindsorTan, 5, 12, 1, 8);
-  fbox(GColorWhite, 12, 25, 18, 5);
-  fbox(GColorLightGray, 12, 29, 18, 1);
+  // bed: posts, base and mattress
+  fbox(GColorWindsorTan, 9, 22, 3, 18);  fbox(GColorRajah, 9, 21, 3, 1);
+  fbox(GColorWindsorTan, 52, 28, 3, 12);  fbox(GColorRajah, 52, 27, 3, 1);
+  fbox(GColorWindsorTan, 9, 36, 46, 3);  fbox(shade(GColorWindsorTan, 1), 9, 36, 46, 1);
+  fbox(shade(GColorWindsorTan, -1), 9, 39, 46, 1);
+  // pillow and the sleeping pet's head
+  fbox(GColorWhite, 12, 25, 18, 5);  fbox(GColorLightGray, 12, 29, 18, 1);
   s_sleeping = true;
   pet(6, 8, true, 0);
   s_sleeping = false;
-  if (s_tick & 2) fbox(GColorCeleste, 29, 23, 3, 3);   // sleepy snot bubble
-  else fbox(GColorCeleste, 29, 24, 2, 2);
-  box(GColorCobaltBlue, 12, 13, 14, 5);          // blanket
-  box(GColorBlueMoon, 12, 13, 14, 1);
-  box(GColorWhite, 15, 15, 2, 1);                // blanket stitching
-  box(GColorWhite, 21, 15, 2, 1);
+  if (s_tick & 2) fbox(GColorCeleste, 29, 22, 3, 3);   // sleepy snot bubble
+  else fbox(GColorCeleste, 29, 23, 2, 2);
+  // blanket with stars and a hem
+  fbox(GColorCobaltBlue, 24, 26, 28, 10);
+  fbox(GColorBlueMoon, 24, 26, 28, 2);
+  fbox(shade(GColorCobaltBlue, -1), 24, 35, 28, 1);
+  for (int x = 30; x < 50; x += 7) {
+    fbox(GColorPastelYellow, x, 30, 1, 3);  fbox(GColorPastelYellow, x - 1, 31, 3, 1);
+  }
+  // plush teddy keeping watch at the foot of the bed
+  fbox(GColorRajah, 46, 22, 5, 4);  fbox(GColorRajah, 45, 21, 2, 2);  fbox(GColorRajah, 49, 21, 2, 2);
+  fbox(GColorBlack, 47, 23, 1, 1);  fbox(GColorBlack, 49, 23, 1, 1);
+  fbox(GColorWindsorTan, 47, 24, 3, 1);
+  (void)t;
   // floating z's
   static const char *zs[3] = {"z", "zz", "zzz"};
-  txt(zs[(s_tick / 2) % 3], FONT_KEY_GOTHIC_24_BOLD, GColorWhite, 13, 4, 10, 8);
+  txt(zs[(s_tick / 2) % 3], FONT_KEY_GOTHIC_24_BOLD, GColorWhite, 15, 3, 10, 8);
 }
 
 static void scene_wake(void) {
@@ -620,13 +633,6 @@ static void scene_code(void) {
 }
 
 
-// Box clamped to the scene (for things that slide in from the edges).
-static void cbox(GColor c, int x, int y, int w, int h) {
-  if (x < 0) { w += x; x = 0; }
-  if (x + w > SCENE_W) w = SCENE_W - x;
-  if (w > 0 && h > 0) box(c, x, y, w, h);
-}
-
 static void scene_brush(void) {
   room(GColorCeleste, GColorLightGray);
   for (int i = 4; i < SCENE_W; i += 4) box(GColorBabyBlueEyes, i, 0, 1, FLOOR_Y);   // tiles
@@ -655,41 +661,48 @@ static void scene_brush(void) {
 
 static void scene_commute(void) {
   bool evening = s_hour >= 16;
-  box(evening ? GColorMelon : GColorCeleste, 0, 0, SCENE_W, 16);
-  box(evening ? GColorOrange : GColorYellow, 4, evening ? 10 : 2, 4, 3);
+  fbox(evening ? GColorMelon : GColorCeleste, 0, 0, FINE_W, 32);
+  fbox(evening ? GColorRajah : GColorBabyBlueEyes, 0, 20, FINE_W, 12);     // sky gradient
+  int sy = evening ? 18 : 4;
+  fbox(evening ? GColorOrange : GColorYellow, 9, sy, 6, 8);  fbox(evening ? GColorOrange : GColorYellow, 8, sy + 1, 8, 6);
+  if (!evening && (s_tick & 1)) { fbox(GColorYellow, 11, sy - 2, 2, 1);  fbox(GColorYellow, 11, sy + 9, 2, 1); }
   cloud(10, 3, 10);
-  // office building with blinking windows
-  box(GColorDarkGray, 22, 3, 8, 13);
+  // office building: roof, antenna, windows and door
+  fbox(GColorDarkGray, 44, 6, 18, 26);  fbox(shade(GColorDarkGray, 1), 44, 6, 18, 1);
+  fbox(GColorBlack, 52, 3, 1, 3);  fbox(GColorRed, 52, 2, 1, 1);
   for (int r = 0; r < 4; r++) {
     for (int c = 0; c < 4; c++) {
       bool lit = ((r * 3 + c + (int)(s_tick / 4)) % 3) == 0;
-      box(lit ? GColorYellow : GColorBabyBlueEyes, 23 + c * 2, 4 + r * 3, 1, 2);
+      fbox(lit ? GColorYellow : GColorBabyBlueEyes, 46 + c * 4, 9 + r * 5, 3, 3);
     }
   }
-  // bus stop sign
-  box(GColorDarkGray, 3, 7, 1, 9);
-  box(GColorRed, 2, 5, 3, 3);
-  // pavement and road
-  box(GColorLightGray, 0, 16, SCENE_W, 2);
-  box(GColorDarkGray, 0, 18, SCENE_W, 3);
-  for (int i = 0; i < 5; i++) {
-    int x = i * 8 - (int)((s_tick * 2) % 8);
-    if (x >= 0) box(GColorYellow, x, 19, 4, 1);
+  fbox(GColorWindsorTan, 51, 27, 4, 5);  fbox(GColorRajah, 54, 29, 1, 1);
+  // bus stop with a bench
+  fbox(GColorDarkGray, 6, 14, 1, 18);
+  fbox(GColorRed, 3, 8, 7, 6);  fbox(GColorWhite, 4, 10, 5, 2);  fbox(GColorBlack, 5, 11, 1, 1);  fbox(GColorBlack, 7, 11, 1, 1);
+  fbox(GColorWindsorTan, 12, 27, 9, 1);  fbox(GColorWindsorTan, 13, 28, 1, 4);  fbox(GColorWindsorTan, 19, 28, 1, 4);
+  // pavement, curb, road with dashes and a zebra crossing
+  fbox(GColorLightGray, 0, 32, FINE_W, 4);
+  for (int x = 6; x < FINE_W; x += 12) fbox(shade(GColorLightGray, -1), x, 32, 1, 4);
+  fbox(GColorDarkGray, 0, 36, FINE_W, 6);  fbox(shade(GColorDarkGray, 1), 0, 36, FINE_W, 1);
+  for (int i = 0; i < 6; i++) {
+    int x = i * 12 - (int)((s_tick * 3) % 12);
+    if (x >= 0) fbox(GColorYellow, x, 39, 6, 1);
   }
   // a little car drives past
-  int cx = (int)((s_tick * 2) % 40) - 7;
-  cbox(GColorRed, cx, 18, 7, 2);
-  cbox(GColorRed, cx + 1, 17, 4, 1);
-  cbox(GColorCeleste, cx + 2, 17, 2, 1);
-  cbox(GColorBlack, cx + 1, 20, 2, 1);
-  cbox(GColorBlack, cx + 4, 20, 2, 1);
+  int cx = (int)((s_tick * 4) % 80) - 14;
+  fbox(GColorRed, cx, 36, 14, 4);  fbox(GColorRed, cx + 3, 33, 8, 3);
+  fbox(GColorCeleste, cx + 4, 34, 3, 2);  fbox(GColorCeleste, cx + 8, 34, 2, 2);
+  fbox(GColorYellow, cx + 13, 37, 1, 1);
+  fbox(GColorBlack, cx + 2, 40, 3, 2);  fbox(GColorBlack, cx + 9, 40, 3, 2);
   // pet walking with a briefcase
   int hop = (int)(s_tick & 1);
   s_bob = 1;
   pet(11, 9, (s_tick % 7) == 0, 0);
   s_bob = 0;
-  px(19, 13 - hop, PET_OUT);
-  box(GColorWindsorTan, 19, 14 - hop, 3, 3);
+  fbox(PET_OUT, 38, 26 - hop, 2, 2);
+  fbox(GColorWindsorTan, 38, 28 - hop, 6, 5);  fbox(GColorRajah, 38, 28 - hop, 6, 1);
+  fbox(GColorBlack, 40, 27 - hop, 2, 1);
 }
 
 static void scene_meeting(void) {
@@ -717,24 +730,37 @@ static void scene_meeting(void) {
 
 static void scene_game(void) {
   room(GColorOxfordBlue, GColorImperialPurple);
-  // TV running a tiny space-shooter
-  box(GColorDarkGray, 16, 3, 14, 11);
-  box(GColorBlack, 17, 4, 12, 9);
+  const int t = (int)(s_tick & 1);
+  // wall poster
+  fbox(GColorRed, 6, 6, 9, 11);  fbox(GColorYellow, 9, 8, 3, 3);  fbox(GColorWhite, 8, 13, 5, 1);
+  // console stand, TV with a space-shooter, and the console
+  fbox(GColorWindsorTan, 30, 30, 32, 6);  fbox(shade(GColorWindsorTan, 1), 30, 30, 32, 1);
+  fbox(GColorDarkGray, 38, 28, 12, 2);  if (t) fbox(GColorRed, 48, 29, 1, 1);
+  fbox(GColorDarkGray, 32, 6, 28, 22);  fbox(shade(GColorDarkGray, 1), 32, 6, 28, 1);
+  fbox(GColorBlack, 34, 8, 24, 18);
+  for (int i = 0; i < 6; i++) fbox(GColorWhite, 35 + (i * 7) % 22, 9 + (i * 5) % 15, 1, 1);   // stars
   for (int r = 0; r < 2; r++) {
     for (int c = 0; c < 4; c++) {
-      box(r ? GColorMagenta : GColorGreen, 18 + c * 3 + (int)((s_tick / 2) % 2), 5 + r * 2, 2, 1);
+      int ax = 36 + c * 5 + (int)((s_tick / 2) % 3);
+      int ay = 10 + r * 4;
+      GColor ac = r ? GColorMagenta : GColorGreen;
+      fbox(ac, ax, ay, 4, 2);  fbox(ac, ax + 1, ay - 1, 2, 1);
+      fbox(ac, ax, ay + 2, 1, 1);  fbox(ac, ax + 3, ay + 2, 1, 1);
     }
   }
-  int shipx = 19 + (int)(s_tick % 5) * 2;
-  box(GColorCyan, shipx, 12, 3, 1);
-  px(shipx + 1, 11, GColorCyan);
-  px(shipx + 1, 11 - 1 - (int)(s_tick % 4), GColorYellow);   // laser
-  box(GColorDarkGray, 21, 14, 4, 1);
+  int shipx = 38 + (int)(s_tick % 5) * 3;
+  fbox(GColorCyan, shipx, 22, 5, 2);  fbox(GColorCyan, shipx + 2, 21, 1, 1);
+  fbox(GColorYellow, shipx + 2, 20 - 2 * (int)(s_tick % 4), 1, 2);
+  fbox(shade(GColorImperialPurple, 1), 30, 36, 32, 1);                  // screen glow on the floor
   // bean bag and pet with controller
   pet(3, 9, (s_tick % 9) == 0, 0);
-  box(GColorDarkGray, 11, 14 + (int)(s_tick & 1), 3, 2);   // controller
-  box(GColorBlueMoon, 1, 15, 13, 3);
-  box(GColorBlueMoon, 3, 14, 9, 1);
+  fbox(GColorPictonBlue, 22, 25 + t, 7, 2);                               // arms
+  fbox(GColorDarkGray, 28, 25 + t, 6, 3);  fbox(GColorRed, 31, 26 + t, 1, 1);  fbox(GColorGreen, 33, 26 + t, 1, 1);
+  fbox(GColorBlueMoon, 2, 30, 26, 6);  fbox(GColorBlueMoon, 4, 28, 22, 2);
+  fbox(shade(GColorBlueMoon, 1), 4, 28, 22, 1);  fbox(shade(GColorBlueMoon, -1), 2, 35, 26, 1);
+  fbox(shade(GColorBlueMoon, 1), 6, 31, 4, 1);
+  // pizza box on the floor
+  fbox(GColorWhite, 30, 38, 8, 2);  fbox(GColorRed, 31, 38, 6, 1);
 }
 
 static void scene_story(void) {
@@ -827,29 +853,40 @@ static void scene_read(void) {
 }
 
 static void scene_walk(void) {
-  box(GColorCeleste, 0, 0, SCENE_W, 14);
-  box(GColorGreen, 0, 14, SCENE_W, 7);
-  box(GColorRajah, 0, 18, SCENE_W, 3);
-  box(GColorYellow, 3, 2, 3, 3);
-  cloud(9, 4, 12);
-  // tree
-  box(GColorWindsorTan, 25, 9, 2, 6);
-  box(GColorIslamicGreen, 22, 3, 8, 7);
-  box(GColorIslamicGreen, 23, 2, 6, 1);
-  px(24, 5, GColorRed);
-  px(27, 7, GColorRed);
-  // flowers
-  static const GColor fl[6] = {GColorRed, GColorYellow, GColorShockingPink,
-                               GColorWhite, GColorRed, GColorYellow};
-  static const int fx[6] = {1, 9, 20, 28, 15, 5};
-  static const int fy[6] = {16, 15, 17, 16, 14, 14};
-  for (int i = 0; i < 6; i++) px(fx[i], fy[i], fl[i]);
-  // butterfly
-  int bx = 4 + (int)(s_tick % 14) * 2;
-  int by = 6 + (int)((s_tick / 2) % 2);
-  cbox(GColorMagenta, bx, by, 1, 1);
-  cbox(GColorShockingPink, bx - 1, by - 1, 1, 1);
-  cbox(GColorShockingPink, bx + 1, by - 1, 1, 1);
+  const int t = (int)(s_tick & 1);
+  fbox(GColorCeleste, 0, 0, FINE_W, 28);
+  fbox(GColorBabyBlueEyes, 0, 18, FINE_W, 10);
+  // sun with twinkling rays
+  fbox(GColorYellow, 7, 4, 6, 6);  fbox(GColorYellow, 6, 5, 8, 4);
+  if (t) { fbox(GColorYellow, 9, 1, 2, 2);  fbox(GColorYellow, 9, 12, 2, 2);  fbox(GColorYellow, 3, 6, 2, 2);  fbox(GColorYellow, 15, 6, 2, 2); }
+  else   { fbox(GColorYellow, 4, 2, 2, 2);  fbox(GColorYellow, 14, 2, 2, 2);  fbox(GColorYellow, 4, 11, 2, 2);  fbox(GColorYellow, 14, 11, 2, 2); }
+  cloud(18, 4, 12);
+  cloud(34, 7, 10);
+  // rolling hills, meadow and a dirt path
+  fbox(GColorMayGreen, 0, 24, FINE_W, 6);  fbox(GColorMayGreen, 8, 22, 18, 3);  fbox(GColorMayGreen, 38, 21, 14, 4);
+  fbox(GColorGreen, 0, 28, FINE_W, 14);
+  for (int x = 3; x < FINE_W; x += 9) { fbox(GColorIslamicGreen, x, 30 + (x % 3), 1, 2);  fbox(GColorIslamicGreen, x + 1, 31 + (x % 3), 1, 1); }
+  fbox(GColorRajah, 0, 36, FINE_W, 6);  fbox(shade(GColorRajah, 1), 0, 36, FINE_W, 1);
+  for (int x = 4; x < FINE_W; x += 11) fbox(GColorWindsorTan, x, 38 + (x % 3), 2, 1);
+  // leafy tree with apples
+  fbox(GColorWindsorTan, 50, 18, 4, 14);  fbox(shade(GColorWindsorTan, -1), 53, 18, 1, 14);
+  fbox(GColorIslamicGreen, 42, 6, 20, 14);  fbox(GColorIslamicGreen, 44, 4, 16, 2);
+  fbox(GColorGreen, 44, 6, 6, 3);  fbox(GColorGreen, 52, 10, 6, 3);  fbox(GColorGreen, 45, 13, 4, 2);
+  fbox(GColorRed, 47, 11, 2, 2);  fbox(GColorRed, 55, 8, 2, 2);  fbox(GColorRed, 58, 14, 2, 2);
+  // flowers with stems
+  static const GColor fl[6] = {GColorRed, GColorYellow, GColorShockingPink, GColorWhite, GColorRed, GColorYellow};
+  static const int fx[6] = {2, 18, 40, 56, 30, 10};
+  static const int fy[6] = {32, 30, 34, 33, 29, 29};
+  for (int i = 0; i < 6; i++) {
+    fbox(GColorIslamicGreen, fx[i], fy[i] + 2, 1, 3);
+    fbox(fl[i], fx[i] - 1, fy[i], 3, 1);  fbox(fl[i], fx[i], fy[i] - 1, 1, 3);
+    fbox(GColorYellow, fx[i], fy[i], 1, 1);
+  }
+  // butterfly with flapping wings
+  int bx = 8 + (int)(s_tick % 14) * 4;
+  int by = 12 + (int)((s_tick / 2) % 2) * 2;
+  fbox(GColorMagenta, bx, by, 1, 2);
+  fbox(GColorShockingPink, bx - 2, by - (t ? 1 : 0), 2, 2);  fbox(GColorShockingPink, bx + 1, by - (t ? 1 : 0), 2, 2);
   // pet out for a walk with a kid in tow
   s_bob = 1;
   pet(14, 10, (s_tick % 7) == 0, 0);
@@ -869,20 +906,25 @@ static void table_scene(bool family) {
     kid(19, 11, GColorCyan, mouth);
     kid(24, 11, GColorYellow, !mouth);
   }
-  // table
-  box(GColorWindsorTan, 6, 14, 24, 2);
-  box(GColorWindsorTan, 7, 16, 2, 4);
-  box(GColorWindsorTan, 27, 16, 2, 4);
-  // plates and food
-  box(GColorWhite, 11, 13, 5, 1);
-  box(GColorChromeYellow, 12, 11, 3, 1);          // bun
-  box(GColorWindsorTan, 12, 12, 3, 1);            // patty
-  px(13, 10 - (int)(s_tick & 1), GColorLightGray);  // steam
+  // table with a gingham cloth, plates and food
+  const int t = (int)(s_tick & 1);
+  fbox(GColorWindsorTan, 14, 31, 3, 5);  fbox(GColorWindsorTan, 55, 31, 3, 5);
+  fbox(GColorRed, 12, 28, 48, 4);
+  for (int x = 12; x < 60; x += 4) { fbox(GColorWhite, x, 28, 2, 2);  fbox(GColorWhite, x + 2, 30, 2, 2); }
+  fbox(shade(GColorRed, 1), 12, 28, 48, 1);  fbox(shade(GColorRed, -1), 12, 31, 48, 1);
+  // burger on a plate
+  fbox(GColorWhite, 21, 26, 12, 2);  fbox(GColorLightGray, 21, 27, 12, 1);
+  fbox(GColorWindsorTan, 23, 23, 8, 2);                                    // patty
+  fbox(GColorGreen, 23, 22, 8, 1);                                         // lettuce
+  fbox(GColorChromeYellow, 23, 19, 8, 3);  fbox(GColorChromeYellow, 24, 18, 6, 1);   // top bun
+  fbox(GColorWhite, 25, 19, 1, 1);  fbox(GColorWhite, 28, 19, 1, 1);        // sesame
+  fbox(GColorChromeYellow, 23, 25, 8, 1);                                  // bottom bun
+  fbox(GColorLightGray, 26 + t, 15, 1, 2);  fbox(GColorLightGray, 28 - t, 13, 1, 2);   // steam
+  // juice glass
+  fbox(GColorOrange, 36, 24, 4, 4);  fbox(GColorWhite, 36, 23, 4, 1);  fbox(GColorWhite, 36, 24, 1, 4);
   if (family) {
-    box(GColorWhite, 19, 13, 4, 1);
-    box(GColorRed, 20, 12, 2, 1);
-    box(GColorWhite, 24, 13, 4, 1);
-    box(GColorGreen, 25, 12, 2, 1);
+    fbox(GColorWhite, 41, 26, 8, 2);  fbox(GColorRed, 43, 24, 4, 2);  fbox(GColorYellow, 43, 23, 4, 1);   // spaghetti
+    fbox(GColorWhite, 51, 26, 8, 2);  fbox(GColorGreen, 52, 24, 6, 2);  fbox(GColorRed, 54, 23, 2, 1);    // salad
   }
 }
 
@@ -915,17 +957,29 @@ static void scene_play(void) {
 
 static void scene_chill(void) {
   room(GColorBlueMoon, GColorImperialPurple);
-  // TV with flickering screen
-  static const GColor tv[3] = {GColorCyan, GColorMagenta, GColorYellow};
-  box(GColorBlack, 19, 7, 11, 8);
-  box(tv[s_tick % 3], 20, 8, 9, 6);
-  box(GColorDarkGray, 22, 15, 5, 1);
-  // sofa with pet
-  box(GColorBulgarianRose, 1, 8, 15, 10);
+  const int t = (int)(s_tick % 3);
+  // rug
+  fbox(GColorIndigo, 6, 38, 50, 3);  fbox(shade(GColorIndigo, 1), 6, 38, 50, 1);
+  // TV on a console, showing a little cartoon with scanlines
+  fbox(GColorWindsorTan, 34, 32, 28, 4);  fbox(shade(GColorWindsorTan, 1), 34, 32, 28, 1);
+  fbox(GColorDarkGray, 36, 10, 24, 20);  fbox(shade(GColorDarkGray, 1), 36, 10, 24, 1);
+  fbox(GColorCyan, 38, 12, 20, 8);  fbox(GColorGreen, 38, 20, 20, 8);
+  fbox(GColorYellow, 53, 13, 3, 3);                                 // cartoon sun
+  fbox(GColorWhite, 40 + (int)((s_tick * 2) % 14), 19, 2, 2);        // runner
+  for (int yy = 12; yy < 28; yy += 2) fbox(shade(yy < 20 ? GColorCyan : GColorGreen, -1), 38, yy, 20, 1);
+  if (t == 0) fbox(GColorWhite, 38, 12, 20, 1);                      // flicker
+  fbox(GColorRed, 57, 28, 1, 1);
+  // sofa: back, pet, seat, arms
+  fbox(GColorBulgarianRose, 2, 16, 30, 20);  fbox(shade(GColorBulgarianRose, 1), 2, 16, 30, 1);
+  fbox(GColorMelon, 6, 22, 5, 5);  fbox(shade(GColorMelon, -1), 6, 26, 5, 1);   // throw pillow
   pet(5, 9, (s_tick % 9) == 0, 0);
-  box(GColorDarkCandyAppleRed, 1, 14, 15, 4);
-  box(GColorDarkCandyAppleRed, 0, 12, 2, 6);
-  box(GColorDarkCandyAppleRed, 15, 12, 2, 6);
+  fbox(GColorDarkCandyAppleRed, 2, 28, 30, 8);  fbox(shade(GColorDarkCandyAppleRed, 1), 2, 28, 30, 1);
+  fbox(shade(GColorDarkCandyAppleRed, -1), 16, 29, 1, 7);
+  fbox(GColorDarkCandyAppleRed, 0, 24, 5, 12);  fbox(GColorDarkCandyAppleRed, 29, 24, 5, 12);
+  fbox(shade(GColorDarkCandyAppleRed, 1), 0, 24, 5, 1);  fbox(shade(GColorDarkCandyAppleRed, 1), 29, 24, 5, 1);
+  // popcorn bowl on the cushion
+  fbox(GColorWhite, 21, 27, 7, 3);  fbox(GColorRed, 21, 28, 7, 1);
+  fbox(GColorPastelYellow, 22, 25, 2, 2);  fbox(GColorWhite, 24, 24, 2, 2);  fbox(GColorPastelYellow, 26, 25, 2, 2);
 }
 
 // ------------------------------------------------------------------ steps
@@ -989,6 +1043,79 @@ static Activity pick_activity(int hour, int min, int wday) {
 
 // ---------------------------------------------------------------- drawing
 
+// ------------------------------------------------- eldritch scene quirks
+// Only the eldritch pets bring their own little twists to a scene.
+static void eldritch_quirk(Activity a) {
+  const int t = (int)(s_tick & 1);
+  switch (s_sp.ears) {
+    case EARS_CTHULHU:
+      if (a == ACT_CODE) {                        // a tentacle curls out of the coffee mug
+        for (int j = 0; j < 7; j++) {
+          fbox(GColorMayGreen, 53 + (((j + (int)s_tick) % 3) == 0 ? 1 : 0), 22 - j, 2, 1);
+        }
+        fbox(GColorIslamicGreen, 54, 15, 2, 1);
+      } else if (a == ACT_SLEEP) {                // a tentacle wiggles out of the blanket
+        for (int j = 0; j < 6; j++) fbox(GColorMayGreen, 42 + (((j + t) & 1) ? 1 : 0), 25 - j, 2, 1);
+        fbox(GColorIslamicGreen, 42 + t, 19, 2, 1);
+      }
+      break;
+    case EARS_SHOGGOTH:
+      if (a == ACT_CODE) {                        // eyes open up on the monitor, goo drips from it
+        int pdx = (int)((s_tick / 2) % 3) - 1;
+        fbox(GColorYellow, 31, 14, 4, 3);  fbox(GColorYellow, 39, 14, 4, 3);
+        fbox(GColorBlack, 32 + pdx + 1, 15, 1, 2);  fbox(GColorBlack, 40 + pdx + 1, 15, 1, 2);
+        fbox(GColorPurple, 28, 8, 8, 2);  fbox(GColorPurple, 30, 10, 2, 2 + t);
+        fbox(GColorPurple, 44, 8, 4, 2);
+      } else if (a == ACT_SLEEP) {                // a purple puddle spreads under the bed
+        fbox(GColorPurple, 16, 40, 28, 2);  fbox(GColorIndigo, 20, 41, 20, 1);
+        fbox(GColorMagenta, 24, 40, 2, 1);  fbox(GColorMagenta, 34 + t, 40, 2, 1);
+        fbox(GColorPurple, 38, 36, 2, 4 + t);                 // drip off the mattress
+      }
+      break;
+    case EARS_DEEP:
+      if (a == ACT_CODE) {                        // a goldfish bowl replaces the mug
+        fbox(GColorBabyBlueEyes, 50, 21, 9, 7);  fbox(GColorWhite, 51, 20, 7, 1);
+        fbox(GColorPictonBlue, 51, 23, 7, 4);
+        fbox(GColorOrange, 52 + (int)((s_tick / 2) % 3), 24 + t, 2, 1);
+        fbox(GColorRed, 51 + (int)((s_tick / 2) % 3), 24 + t, 1, 1);
+        fbox(GColorWhite, 55, 22 - t, 1, 1);
+        fbox(GColorGreen, 57, 25, 1, 2);
+      } else if (a == ACT_BRUSH) {                // a fish leaps out of the sink
+        int ph = (int)(s_tick % 6);
+        int fx = 34 + ph * 4, fy = 24 - (ph * (6 - ph) * 2) / 3;
+        fbox(GColorOrange, fx, fy, 5, 3);  fbox(GColorWhite, fx + 1, fy + 2, 3, 1);
+        fbox(GColorRed, fx - 2, fy - 1, 2, 1);  fbox(GColorRed, fx - 2, fy + 2, 2, 1);
+        fbox(GColorBlack, fx + 3, fy, 1, 1);
+        if (ph == 0 || ph == 5) {                       // splash
+          fbox(GColorWhite, fx - 1, 22, 1, 1);  fbox(GColorWhite, fx + 5, 21, 1, 1);  fbox(GColorWhite, fx + 2, 20, 1, 1);
+        }
+      }
+      break;
+    case EARS_EYE:
+      if (a == ACT_CODE) {                        // the monitor shows a giant watching eye
+        fbox(GColorBlack, 26, 10, 22, 13);
+        fbox(GColorWhite, 30, 12, 14, 9);  fbox(GColorLightGray, 30, 12, 14, 1);
+        int ix = 35 + (int)((s_tick / 3) % 3) - 1;
+        if ((s_tick % 7) == 0) {
+          fbox(GColorBlack, 30, 16, 14, 1);
+        } else {
+          fbox(GColorMagenta, ix, 13, 5, 7);  fbox(GColorBlack, ix + 1, 13, 3, 7);
+          fbox(GColorWhite, ix, 13, 1, 2);
+        }
+        fbox(GColorRed, 31, 13, 2, 1);  fbox(GColorRed, 42, 19, 1, 2);
+      } else if (a == ACT_SLEEP) {                // the moon has an eye that blinks
+        if ((s_tick % 5) == 0) {
+          fbox(GColorBlack, 49, 10, 6, 1);
+        } else {
+          fbox(GColorWhite, 49, 8, 6, 5);  fbox(GColorMagenta, 51, 9, 2, 3);  fbox(GColorBlack, 51, 10, 2, 1);
+        }
+      }
+      break;
+    default:
+      break;
+  }
+}
+
 static void heart_raw(GContext *ctx, int x, int y, int u, GColor c) {
   graphics_context_set_fill_color(ctx, c);
   graphics_fill_rect(ctx, GRect(x, y, u, u), 0, GCornerNone);
@@ -1023,7 +1150,8 @@ static void canvas_update(Layer *layer, GContext *ctx) {
 
   s_bob = 0;
   s_floor_ok = false;
-  switch (pick_activity(s_hour, s_min, s_wday)) {
+  Activity act = pick_activity(s_hour, s_min, s_wday);
+  switch (act) {
     case ACT_SLEEP:  scene_sleep();       break;
     case ACT_WAKE:   scene_wake();        break;
     case ACT_CODE:   scene_code();        break;
@@ -1039,6 +1167,7 @@ static void canvas_update(Layer *layer, GContext *ctx) {
     case ACT_READ:   scene_read();        break;
     case ACT_WALK:   scene_walk();        break;
   }
+  eldritch_quirk(act);
 
   // date
   graphics_context_set_text_color(ctx, GColorLightGray);

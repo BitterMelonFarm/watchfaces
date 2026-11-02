@@ -39,7 +39,12 @@ Nine pets: blob (pink), cat (orange tabby with whiskers and a wagging tail), bun
 
 ![eldritch pets](desk-pet/docs/eldritch.png)
 
-Columns: coding, play, sad at the desk, happy on a walk, asleep. Rows (eldritch): cthulhu, shoggoth, deep one, great eye.
+Columns: coding, play, sad at the desk, happy on a walk, asleep.
+
+**Eldritch scene quirks** (only for those pets): Cthulhu has a tentacle curling out of the coffee mug and waving from the blanket; the Shoggoth grows eyes on the monitor and leaves a goo puddle under the bed; the Deep One keeps a goldfish bowl on the desk and a fish leaps out of the bathroom sink; the Great Eye watches from the monitor and the moon.
+
+![quirks](desk-pet/docs/quirks.png)
+ Rows (eldritch): cthulhu, shoggoth, deep one, great eye.
 
 ### Status
 

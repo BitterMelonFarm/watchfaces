@@ -73,4 +73,12 @@ for fname, sel in (("pets.png", rows[:5]), ("eldritch.png", rows[5:])):
         for c_i, im in enumerate(row):
             sheet2.paste(im, (c_i * 260, r_i * 260))
     sheet2.save(os.path.join(out, fname))
+# Eldritch quirks: (species, scene) pairs that have special props.
+Q = [(5, "code", 10, 2, 9), (5, "sleep", 23, 2, 30), (6, "code", 10, 2, 9), (6, "sleep", 23, 2, 30),
+     (7, "code", 10, 2, 9), (7, "brush", 7, 2, 40), (8, "code", 10, 2, 9), (8, "sleep", 23, 2, 30)]
+qs = [frame(f"quirk_{sp}_{n}", h, w, m, 3000, 80, 3, sp) for sp, n, h, w, m in Q]
+qsheet = Image.new("RGB", (260 * 4, 260 * 2))
+for i, im in enumerate(qs):
+    qsheet.paste(im, ((i % 4) * 260, (i // 4) * 260))
+qsheet.save(os.path.join(out, "quirks.png"))
 print("wrote", out)
