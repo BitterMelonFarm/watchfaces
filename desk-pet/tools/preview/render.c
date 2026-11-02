@@ -58,6 +58,7 @@ int main(int argc, char **argv) {
   g_steps = atoi(argv[4]); s_batt = atoi(argv[5]); s_tick = atoi(argv[6]);
   snprintf(s_time_buf, sizeof s_time_buf, "%02d:%02d", s_hour, s_min);
   snprintf(s_date_buf, sizeof s_date_buf, "%s Nov 2", (const char *[]){"Sun","Mon","Tue","Wed","Thu","Fri","Sat"}[s_wday]);
+  if (argc > 8 && atoi(argv[8])) { s_react_start = s_tick; s_react_until = s_tick + 5; }
   if (argc > 7) load_species(atoi(argv[7]));
   else load_species(0);
   update_steps();

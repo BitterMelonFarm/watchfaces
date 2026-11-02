@@ -21,8 +21,8 @@ def fnt(name):
             return ImageFont.truetype(p, int(size * .8))
     return ImageFont.load_default()
 
-def frame(name, hour, wday, minute=9, steps=3000, batt=80, tick=0, species=0):
-    r = subprocess.run([exe, *map(str, (hour, wday, minute, steps, batt, tick, species))], capture_output=True, check=True)
+def frame(name, hour, wday, minute=9, steps=3000, batt=80, tick=0, species=0, react=0):
+    r = subprocess.run([exe, *map(str, (hour, wday, minute, steps, batt, tick, species, react))], capture_output=True, check=True)
     im = Image.new("RGB", (260, 260))
     px = im.load()
     for y in range(260):
@@ -73,6 +73,12 @@ for fname, sel in (("pets.png", rows[:5]), ("eldritch.png", rows[5:])):
         for c_i, im in enumerate(row):
             sheet2.paste(im, (c_i * 260, r_i * 260))
     sheet2.save(os.path.join(out, fname))
+# Tap-to-pet reaction (hearts + hop) for a few pets.
+rs = [frame(f"react_{sp}", 19, 2, 0, 5000, 80, 3, sp, 1) for sp in (0, 1, 5, 8)]
+rsheet = Image.new("RGB", (260 * 4, 260))
+for i, im in enumerate(rs): rsheet.paste(im, (i * 260, 0))
+rsheet.save(os.path.join(out, "react.png"))
+
 # Eldritch quirks: (species, scene) pairs that have special props.
 Q = [(5, "code", 10, 2, 9), (5, "sleep", 23, 2, 30), (6, "code", 10, 2, 9), (6, "sleep", 23, 2, 30),
      (7, "code", 10, 2, 9), (7, "brush", 7, 2, 40), (8, "code", 10, 2, 9), (8, "sleep", 23, 2, 30)]
