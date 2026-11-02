@@ -16,7 +16,7 @@ A Tamagotchi-style pet whose activity follows the time of day.
 | 17:00 | Walking home (sunset sky) | Playing with the kids |
 | 18:00 | Family dinner | Family dinner |
 | 19:00 | Playing ball with the kids | Playing with the kids |
-| 20:00 | Bath with a rubber duck | same |
+| 20:00 | Bedtime story: reading to the kids, who fall asleep at :30 | same |
 | 21:00 | Reading in bed | same |
 
 The scene is a 64x42 pixel grid (16x16 pet sprites with outlines, shading and glossy eyes; textured wallpaper and wood floors; beveled furniture; pet shadows). Battery is shown as 5 hearts. A green step bar fills toward 8,000 steps (gold when reached); the pet frowns and cries if you fall well behind pace after 11:00, and smiles once the goal is hit. All art is drawn with rectangles (no image assets).

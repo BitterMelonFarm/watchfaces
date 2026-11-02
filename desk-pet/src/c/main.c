@@ -17,7 +17,7 @@ typedef enum {
   ACT_COMMUTE,
   ACT_MEETING,
   ACT_GAME,
-  ACT_BATH,
+  ACT_STORY,
   ACT_READ,
   ACT_WALK,
 } Activity;
@@ -384,6 +384,8 @@ static void pet(int x, int y, bool blink, int mouth) {
 }
 
 // A smaller kid blob: 10x8 fine pixels with a tuft of hair and shading.
+static bool s_kid_sleep;   // kids draw with closed eyes when set
+
 static void kid(int x, int y, GColor c, bool happy) {
   const int X = x * 2, Y = y * 2;
 #define K(col, dx, dy, w, h) fbox((col), X + (dx), Y + (dy), (w), (h))
@@ -396,11 +398,17 @@ static void kid(int x, int y, GColor c, bool happy) {
   for (int r = 1; r < 7; r++) K(c, A[r] + 1, r, B[r] - A[r] - 1, 1);
   K(shade(c, 1), 2, 1, 3, 1);  K(shade(c, 1), 1, 2, 1, 2);
   // eyes with shine
-  K(GColorBlack, 2, 3, 2, 2);  K(GColorBlack, 6, 3, 2, 2);
-  K(GColorWhite, 2, 3, 1, 1);  K(GColorWhite, 6, 3, 1, 1);
+  if (s_kid_sleep) {
+    K(GColorBlack, 2, 4, 2, 1);  K(GColorBlack, 6, 4, 2, 1);        // sleepy lines
+  } else {
+    K(GColorBlack, 2, 3, 2, 2);  K(GColorBlack, 6, 3, 2, 2);
+    K(GColorWhite, 2, 3, 1, 1);  K(GColorWhite, 6, 3, 1, 1);
+  }
   // blush + mouth
   K(GColorMelon, 1, 5, 1, 1);  K(GColorMelon, 8, 5, 1, 1);
-  if (happy) {
+  if (s_kid_sleep) {
+    K(GColorBlack, 4, 6, 2, 1);
+  } else if (happy) {
     K(GColorRed, 4, 5, 2, 2);  K(GColorBlack, 4, 5, 2, 1);
   } else {
     K(GColorBlack, 4, 5, 2, 1);
@@ -656,35 +664,65 @@ static void scene_game(void) {
   box(GColorBlueMoon, 3, 14, 9, 1);
 }
 
-static void scene_bath(void) {
-  room(GColorCeleste, GColorLightGray);
-  for (int i = 4; i < SCENE_W; i += 4) box(GColorBabyBlueEyes, i, 0, 1, FLOOR_Y);
-  for (int j = 4; j < FLOOR_Y; j += 4) box(GColorBabyBlueEyes, 0, j, SCENE_W, 1);
-  // steam
-  px(8 + (int)(s_tick % 3), 4, GColorWhite);
-  px(20 - (int)(s_tick % 3), 3, GColorWhite);
-  // pet in the tub
-  pet(12, 6, (s_tick % 7) == 0, 0);
-  box(GColorLightGray, 3, 11, 26, 1);
-  box(GColorWhite, 4, 12, 24, 7);
-  box(GColorPictonBlue, 5, 12, 22, 1);
-  box(GColorBabyBlueEyes, 5, 13, 22, 4);
-  box(GColorLightGray, 6, 19, 3, 1);                      // tub feet
-  box(GColorLightGray, 23, 19, 3, 1);
-  // bubbles
-  for (int i = 0; i < 5; i++) {
-    int bx = 6 + i * 5 + (int)((s_tick / 2 + i) % 2);
-    int by = 11 - (int)((s_tick + i) % 3);
-    if (i == 2) continue;                                   // leave room for the pet
-    px(bx, by, GColorWhite);
-    box(GColorWhite, bx + 1, 12, 2, 1);
+static void scene_story(void) {
+  // Bedtime story: the pet reads to two tucked-in kids; they nod off at :30.
+  bool asleep = s_min >= 30;
+  room(GColorDukeBlue, GColorBulgarianRose);
+  // night window
+  box(GColorWhite, 18, 2, 7, 6);
+  box(GColorOxfordBlue, 19, 3, 5, 4);
+  px(21, 4, GColorPastelYellow);
+  if ((s_tick + 1) % 3) px(22, 6, GColorWhite);
+  if ((s_tick + 2) % 3) px(19, 5, GColorWhite);
+  box(GColorWhite, 21, 2, 1, 6);
+  // the kids' bed: headboard, pillows, little heads, blanket
+  box(GColorWindsorTan, 1, 8, 1, 11);
+  box(GColorWhite, 2, 11, 6, 3);
+  box(GColorWhite, 8, 11, 6, 3);
+  s_kid_sleep = asleep || ((s_tick % 9) == 0);          // awake kids blink now and then
+  kid(3, 10, GColorCyan, true);
+  kid(9, 10, GColorYellow, true);
+  s_kid_sleep = false;
+  box(GColorCobaltBlue, 2, 13, 13, 5);
+  box(GColorBlueMoon, 2, 13, 13, 1);
+  box(GColorWhite, 4, 15, 2, 1);                         // blanket stitching
+  box(GColorWhite, 10, 15, 2, 1);
+  box(GColorWindsorTan, 1, 17, 15, 2);
+  // thought bubble above the beds: dreams of the story, or zzz once asleep
+  box(GColorWhite, 3, 2, 9, 6);
+  box(GColorWhite, 5, 8, 1, 1);
+  box(GColorWhite, 4, 9, 1, 1);
+  if (asleep) {
+    static const char *zs[3] = {"z", "zz", "zzz"};
+    txt(zs[(s_tick / 2) % 3], FONT_KEY_GOTHIC_24_BOLD, GColorDarkGray, 4, 1, 8, 7);
+  } else {
+    switch ((s_tick / 4) % 3) {
+      case 0:
+        box(GColorYellow, 7, 3, 1, 4);
+        box(GColorYellow, 6, 4, 3, 1);
+        break;
+      case 1:
+        heart_px(GColorShockingPink, 6, 4);
+        break;
+      default:
+        box(GColorPastelYellow, 6, 3, 3, 4);
+        box(GColorWhite, 7, 3, 2, 3);
+        break;
+    }
   }
-  // rubber duck bobbing
-  int bobd = (int)(s_tick & 1);
-  box(GColorYellow, 22, 10 + bobd, 3, 2);
-  px(23, 9 + bobd, GColorYellow);
-  px(25, 10 + bobd, GColorOrange);
-  px(23, 9 + bobd, GColorYellow);
+  // armchair with the pet reading aloud
+  box(GColorOrange, 20, 7, 11, 11);
+  pet(22, 7, (s_tick % 7) == 0, asleep ? 0 : (int)((s_tick / 2) & 1));
+  box(GColorChromeYellow, 20, 16, 11, 2);                // seat cushion
+  box(GColorOrange, 19, 12, 2, 6);                       // arms
+  box(GColorOrange, 30, 12, 2, 6);
+  // big storybook
+  box(GColorWhite, 23, 13, 3, 3);
+  box(GColorWhite, 26, 13, 3, 3);
+  box(GColorDarkGray, 26, 13, 1, 3);
+  px(24, 14, GColorLightGray);
+  px(27, 14, GColorLightGray);
+  if ((s_tick / 4) & 1) px(26, 12, GColorWhite);         // page turn
 }
 
 static void scene_read(void) {
@@ -857,7 +895,7 @@ static Activity pick_activity(int hour, int min, int wday) {
   bool weekend = (wday == 0 || wday == 6);
   if (hour < 7 || hour >= 22) return ACT_SLEEP;
   if (hour == 7) return (min < 30) ? ACT_WAKE : ACT_BRUSH;
-  if (hour == 20) return ACT_BATH;
+  if (hour == 20) return ACT_STORY;
   if (hour == 21) return ACT_READ;
   if (weekend) {
     if (hour == 8 || hour == 12) return ACT_LUNCH;     // breakfast / lunch
@@ -924,7 +962,7 @@ static void canvas_update(Layer *layer, GContext *ctx) {
     case ACT_COMMUTE: scene_commute();    break;
     case ACT_MEETING: scene_meeting();    break;
     case ACT_GAME:   scene_game();        break;
-    case ACT_BATH:   scene_bath();        break;
+    case ACT_STORY:  scene_story();       break;
     case ACT_READ:   scene_read();        break;
     case ACT_WALK:   scene_walk();        break;
   }

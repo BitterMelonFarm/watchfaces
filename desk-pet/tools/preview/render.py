@@ -50,13 +50,13 @@ SCENES = [
     ("brush", 7, 2, 40, 100, 80, 1), ("commute", 8, 2, 10, 500, 80, 3),
     ("code", 10, 2, 9, 3000, 80, 2), ("meeting", 11, 2, 10, 3500, 80, 4),
     ("lunch", 12, 2, 15, 3500, 60, 1), ("dinner", 18, 2, 30, 6000, 40, 1),
-    ("play", 19, 2, 0, 5000, 80, 5), ("bath", 20, 2, 30, 6500, 70, 1),
+    ("play", 19, 2, 0, 5000, 80, 5), ("story", 20, 2, 10, 6500, 70, 1), ("story_asleep", 20, 2, 40, 6500, 70, 2),
     ("read", 21, 2, 30, 6500, 70, 4), ("walk", 10, 6, 0, 2000, 90, 5),
     ("game", 15, 0, 30, 3000, 80, 3), ("chill", 13, 0, 0, 3000, 80, 4),
     ("code_sad", 14, 2, 0, 400, 80, 2), ("happy", 19, 2, 0, 8500, 100, 1),
 ]
 ims = [frame(*s) for s in SCENES]
-sheet = Image.new("RGB", (260 * 4, 260 * 4))
+sheet = Image.new("RGB", (260 * 4, 260 * 5))
 for i, im in enumerate(ims):
     sheet.paste(im, ((i % 4) * 260, (i // 4) * 260))
 sheet.save(os.path.join(out, "sheet.png"))
