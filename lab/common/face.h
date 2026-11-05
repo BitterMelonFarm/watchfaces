@@ -70,6 +70,20 @@ static int isin(int deg) {
   return -SIN_Q10[360 - deg];
 }
 static int icos(int deg) { return isin(deg + 90); }
+// finer angles: tenths of a degree, linearly interpolated
+static int isin10(int dd) {
+  dd %= 3600;
+  if (dd < 0) dd += 3600;
+  int d = dd / 10, f = dd % 10;
+  int a = isin(d), b = isin(d + 1);
+  return a + (b - a) * f / 10;
+}
+static int icos10(int dd) { return isin10(dd + 900); }
+// point at radius r and maths angle in tenths of a degree
+static void math_pt10(int cx, int cy, int r, int dd, int *x, int *y) {
+  *x = cx + (r * icos10(dd) + (r >= 0 ? 512 : -512)) / 1024;
+  *y = cy - (r * isin10(dd) + (r >= 0 ? 512 : -512)) / 1024;
+}
 // point at radius r and clock angle (0 = 12 o'clock, clockwise)
 static void clock_pt(int cx, int cy, int r, int deg, int *x, int *y) {
   *x = cx + (r * isin(deg) + (r >= 0 ? 512 : -512)) / 1024;
