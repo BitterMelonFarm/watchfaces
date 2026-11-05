@@ -65,3 +65,7 @@ python3 desk-pet/tools/preview/render.py /tmp/preview   # needs gcc + Pillow
 ```
 
 ![preview](desk-pet/docs/preview.png)
+
+## lab
+
+Fourteen physics & engineering watchfaces (orrery, oscilloscope, periodic table, gear train, pendulum wave, resistor clock, radar, double pendulum, ripple tank, Kepler orbit, logic analyzer, analemma, Bohr atom, Newton's cradle) on a shared framework. See [`lab/`](lab/README.md).
