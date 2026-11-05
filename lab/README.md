@@ -32,11 +32,10 @@ project (own UUID, `pebble build`), but they all `#include "../../../common/face
   Everything is drawn with rectangles and no system fonts, so previews match the watch pixel for pixel.
 - `release/` - a prebuilt `.pbw` for every face (SDK 4.33.1, 10-14 KB each) and `lab-faces.zip`.
 
-
 ## Draw-call cost (a CPU/battery proxy)
 
-I can't time anything on a real watch, so  counts  calls per frame in the host
-renderer and snapshots pixel hashes. The shared  and micro-font text now merge runs of pixels into
+I can't time anything on a real watch, so `tools/stats.py` counts `fill_rect` calls per frame in the host
+renderer and snapshots pixel hashes. The shared `line()` and micro-font text now merge runs of pixels into
 single rectangles (pixel-identical output, verified by hash), Ripple Tank merges equal-colour runs per row,
 and Kepler Clock fills its wedges scanline by scanline. Before -> after, average calls per frame:
 Kepler Clock 8,311 -> 2,430; Oscilloscope 3,202 -> 1,653; Pendulum Wave 3,030 -> 1,217; Chaos Clock
