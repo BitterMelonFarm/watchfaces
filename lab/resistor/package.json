@@ -1,0 +1,29 @@
+{
+  "name": "resistor",
+  "author": "edutch95",
+  "version": "1.0.0",
+  "keywords": [
+    "pebble-app"
+  ],
+  "private": true,
+  "dependencies": {},
+  "pebble": {
+    "displayName": "Resistor Clock",
+    "uuid": "c5bd4f93-0a05-49cb-b87f-d71ae3bd67cd",
+    "projectType": "native",
+    "sdkVersion": "3",
+    "enableMultiJS": false,
+    "targetPlatforms": [
+      "gabbro"
+    ],
+    "watchapp": {
+      "watchface": true
+    },
+    "capabilities": [
+      "health"
+    ],
+    "resources": {
+      "media": []
+    }
+  }
+}
