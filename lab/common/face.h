@@ -84,6 +84,12 @@ static void math_pt10(int cx, int cy, int r, int dd, int *x, int *y) {
   *x = cx + (r * icos10(dd) + (r >= 0 ? 512 : -512)) / 1024;
   *y = cy - (r * isin10(dd) + (r >= 0 ? 512 : -512)) / 1024;
 }
+// float sin/cos from the same table (radians), for the odd physics integrator
+static float fsin(float x) {
+  int dd = (int)(x * 572.9578f + (x >= 0 ? 0.5f : -0.5f));
+  return isin10(dd) / 1024.0f;
+}
+static float fcos(float x) { return fsin(x + 1.5707963f); }
 // point at radius r and clock angle (0 = 12 o'clock, clockwise)
 static void clock_pt(int cx, int cy, int r, int deg, int *x, int *y) {
   *x = cx + (r * isin(deg) + (r >= 0 ? 512 : -512)) / 1024;

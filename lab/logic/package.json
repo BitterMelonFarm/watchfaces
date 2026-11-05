@@ -1,0 +1,29 @@
+{
+  "name": "logic",
+  "author": "edutch95",
+  "version": "1.0.0",
+  "keywords": [
+    "pebble-app"
+  ],
+  "private": true,
+  "dependencies": {},
+  "pebble": {
+    "displayName": "Logic Analyzer",
+    "uuid": "c2cf4435-78fc-4f24-8012-faa3b0d417d4",
+    "projectType": "native",
+    "sdkVersion": "3",
+    "enableMultiJS": false,
+    "targetPlatforms": [
+      "gabbro"
+    ],
+    "watchapp": {
+      "watchface": true
+    },
+    "capabilities": [
+      "health"
+    ],
+    "resources": {
+      "media": []
+    }
+  }
+}

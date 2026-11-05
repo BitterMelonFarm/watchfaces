@@ -1,0 +1,29 @@
+{
+  "name": "ripple",
+  "author": "edutch95",
+  "version": "1.0.0",
+  "keywords": [
+    "pebble-app"
+  ],
+  "private": true,
+  "dependencies": {},
+  "pebble": {
+    "displayName": "Ripple Tank",
+    "uuid": "5036a2c5-4745-425c-bfa9-a8a68cb074d2",
+    "projectType": "native",
+    "sdkVersion": "3",
+    "enableMultiJS": false,
+    "targetPlatforms": [
+      "gabbro"
+    ],
+    "watchapp": {
+      "watchface": true
+    },
+    "capabilities": [
+      "health"
+    ],
+    "resources": {
+      "media": []
+    }
+  }
+}

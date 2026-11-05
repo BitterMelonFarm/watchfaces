@@ -17,12 +17,6 @@
 
 typedef struct { float a1, a2, w1, w2; } St;
 
-static float fsin(float x) {
-  int dd = (int)(x * 572.9578f + (x >= 0 ? 0.5f : -0.5f));
-  return isin10(dd) / 1024.0f;
-}
-static float fcos(float x) { return fsin(x + 1.5707963f); }
-
 static St deriv(St s) {
   float d = s.a1 - s.a2, sd = fsin(d), cd = fcos(d);
   float den = 3.0f - (2.0f * cd * cd - 1.0f);

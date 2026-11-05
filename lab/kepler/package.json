@@ -1,0 +1,29 @@
+{
+  "name": "kepler",
+  "author": "edutch95",
+  "version": "1.0.0",
+  "keywords": [
+    "pebble-app"
+  ],
+  "private": true,
+  "dependencies": {},
+  "pebble": {
+    "displayName": "Kepler Clock",
+    "uuid": "e6d7c386-2c04-43d0-81e6-d5d90f9c279c",
+    "projectType": "native",
+    "sdkVersion": "3",
+    "enableMultiJS": false,
+    "targetPlatforms": [
+      "gabbro"
+    ],
+    "watchapp": {
+      "watchface": true
+    },
+    "capabilities": [
+      "health"
+    ],
+    "resources": {
+      "media": []
+    }
+  }
+}
