@@ -9,11 +9,13 @@
 uint8_t fb[SW][SW];
 static GColor fillc;
 static int g_steps;
+static long g_calls, g_area;
 
 void fb_text_log(const char *s, GFont f, GRect r, GColor c, GTextAlignment a) {}
 void graphics_context_set_fill_color(GContext *c, GColor col) { fillc = col; }
 void graphics_context_set_text_color(GContext *c, GColor col) {}
 void graphics_fill_rect(GContext *c, GRect r, uint16_t rad, GCornerMask m) {
+  g_calls++; g_area += (long)r.size.w * r.size.h;
   for (int y = r.origin.y; y < r.origin.y + r.size.h; y++)
     for (int x = r.origin.x; x < r.origin.x + r.size.w; x++) {
       if (x < 0 || y < 0 || x >= SW || y >= SW) continue;
@@ -68,5 +70,6 @@ int main(int argc, char **argv) {
   face_init();
   canvas_update(NULL, NULL);
   fwrite(fb, 1, sizeof fb, stdout);
+  fprintf(stderr, "STAT %ld %ld\n", g_calls, g_area);
   return 0;
 }

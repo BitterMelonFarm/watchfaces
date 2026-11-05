@@ -137,12 +137,27 @@ static void line(GColor c, int x0, int y0, int x1, int y1, int th) {
   int sx = x0 < x1 ? 1 : -1, sy = y0 < y1 ? 1 : -1;
   int err = dx + dy;
   int o = th / 2;
+  bool xmajor = dx >= -dy;
+  // Walk Bresenham but emit one rectangle per run of pixels sharing the minor coordinate. The union of
+  // th x th squares along a run is a single (run + th - 1) x th rectangle, so the output is identical.
+  int rs_x = x0, rs_y = y0;                       // run start
   for (;;) {
-    R(c, x0 - o, y0 - o, th, th);
-    if (x0 == x1 && y0 == y1) break;
-    int e2 = 2 * err;
-    if (e2 >= dy) { err += dy; x0 += sx; }
-    if (e2 <= dx) { err += dx; y0 += sy; }
+    bool last = (x0 == x1 && y0 == y1);
+    int nx = x0, ny = y0;
+    if (!last) {
+      int e2 = 2 * err;
+      if (e2 >= dy) { err += dy; nx += sx; }
+      if (e2 <= dx) { err += dx; ny += sy; }
+    }
+    bool breaks = last || (xmajor ? ny != rs_y : nx != rs_x);
+    if (breaks) {
+      int rx = imin(rs_x, x0), ry = imin(rs_y, y0);
+      int rw = iabs(x0 - rs_x) + 1, rh = iabs(y0 - rs_y) + 1;
+      R(c, rx - o, ry - o, rw + th - 1, rh + th - 1);
+      if (last) break;
+      rs_x = nx; rs_y = ny;
+    }
+    x0 = nx; y0 = ny;
   }
 }
 static void tri(GColor c, int x0, int y0, int x1, int y1, int x2, int y2) {
@@ -206,9 +221,16 @@ static void micro(const char *s, int x, int y, int sc, GColor c) {
     if (ch >= 'a' && ch <= 'z') ch = (char)(ch - 32);
     for (size_t i = 0; i < sizeof(MICRO) / sizeof(MICRO[0]); i++) {
       if (MICRO[i].ch != ch) continue;
-      for (int r = 0; r < 5; r++)
-        for (int k = 0; k < 3; k++)
-          if (MICRO[i].bits[r * 3 + k] == '1') R(c, x + k * sc, y + r * sc, sc, sc);
+      for (int r = 0; r < 5; r++) {
+        int k = 0;
+        while (k < 3) {
+          if (MICRO[i].bits[r * 3 + k] != '1') { k++; continue; }
+          int e = k;
+          while (e < 3 && MICRO[i].bits[r * 3 + e] == '1') e++;
+          R(c, x + k * sc, y + r * sc, (e - k) * sc, sc);          // one rect per run of lit pixels
+          k = e;
+        }
+      }
       break;
     }
   }

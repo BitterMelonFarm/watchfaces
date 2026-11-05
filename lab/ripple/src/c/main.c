@@ -31,21 +31,30 @@ static void face_draw(void) {
                                  GColorVividCerulean, GColorCyan, GColorElectricBlue, GColorCeleste, GColorWhite};
   int wt = (s_sec * 60) % 360;                       // wave phase advances 60 degrees per second
   for (int cy = 0; cy < 260; cy += CELL) {
-    for (int cx = 0; cx < 260; cx += CELL) {
-      int x = cx + CELL / 2, y = cy + CELL / 2;
-      int dx0 = x - 130, dy0 = y - 130;
-      if (dx0 * dx0 + dy0 * dy0 > 128 * 128) continue;
-      int sum = 0;
-      for (int i = 0; i < nsrc; i++) {
-        int dx = x - sx[i], dy = y - sy[i];
-        int r = isqrt(dx * dx + dy * dy);
-        sum += isin(r * 360 / lambda - wt);
+    int run_x = 0, run_idx = -1;                       // merge runs of equal colour along the row
+    for (int cx = 0; cx <= 260; cx += CELL) {
+      int idx = -1;
+      if (cx < 260) {
+        int x = cx + CELL / 2, y = cy + CELL / 2;
+        int dx0 = x - 130, dy0 = y - 130;
+        if (dx0 * dx0 + dy0 * dy0 <= 128 * 128) {
+          int sum = 0;
+          for (int i = 0; i < nsrc; i++) {
+            int dx = x - sx[i], dy = y - sy[i];
+            int r = isqrt(dx * dx + dy * dy);
+            sum += isin(r * 360 / lambda - wt);
+          }
+          int lim = 1024 * nsrc;                       // amplitude range [-lim, lim]
+          idx = (sum + lim) * 8 / (2 * lim);
+          if (idx < 0) idx = 0;
+          if (idx > 8) idx = 8;
+        }
       }
-      int lim = 1024 * nsrc;                         // amplitude range [-lim, lim]
-      int idx = (sum + lim) * 8 / (2 * lim);
-      if (idx < 0) idx = 0;
-      if (idx > 8) idx = 8;
-      R(ramp[idx], cx, cy, CELL, CELL);
+      if (idx != run_idx) {
+        if (run_idx >= 0) R(ramp[run_idx], run_x, cy, cx - run_x, CELL);
+        run_x = cx;
+        run_idx = idx;
+      }
     }
   }
   // sources

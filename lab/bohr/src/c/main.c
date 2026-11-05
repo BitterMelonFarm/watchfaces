@@ -9,7 +9,7 @@
 #include "../../../common/face.h"
 
 #define BCX 130
-#define BCY 100
+#define BCY 110
 
 static void face_init(void) { s_aux %= 2; }
 static void face_tap(void) { s_aux = (s_aux + 1) % 2; }
@@ -17,7 +17,7 @@ static void face_tap(void) { s_aux = (s_aux + 1) % 2; }
 static const int LEVELS[8] = {2, 2, 3, 4, 5, 1, 3, 2};
 static int level_at(int t) { return LEVELS[hash2((uint32_t)t, 9) % 8]; }
 
-static int rad_of(int n) { return 14 + (n - 1) * 18; }
+static int rad_of(int n) { return 12 + (n - 1) * 16; }
 
 // wavelength in nm for a transition between ni and nf (ni > nf)
 static int lambda_nm(int ni, int nf) {
@@ -109,7 +109,7 @@ static void face_draw(void) {
     if (w < 380 || w > 740) continue;
     R(k == 0 ? GColorWhite : lambda_col(w), nm_to_x(w) - 1, 192, 4, 12);
   }
-  micro("400", 50, 180, 1, GColorLightGray);  micro_r("700 NM", 210, 180, 1, GColorLightGray);
+  micro("400", 26, 195, 1, GColorLightGray);  micro("700", 214, 195, 1, GColorLightGray);
   char buf[40];
   if (nm) {
     const char *nmname = (n < nprev && n == 2) ? (nprev == 3 ? " H-ALPHA" : (nprev == 4 ? " H-BETA" : (nprev == 5 ? " H-GAMMA" : ""))) : "";

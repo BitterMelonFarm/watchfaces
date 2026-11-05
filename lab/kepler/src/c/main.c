@@ -35,32 +35,64 @@ static void face_draw(void) {
   int b = (int)isqrt((int)((1.0f - e * e) * 1000000.0f)) * AOR / 1000;
   int fy = CYO - (int)(AOR * e);                    // the Sun sits at a focus, near periapsis (top)
   int fx = CXO;
-  // hour wedges: equal-area sectors from the Sun
+  // hour wedges: equal-area sectors from the Sun, painted scanline by scanline. Rays run from the Sun
+  // to each hour mark (plus one to the planet inside the current hour); every row is cut at the points
+  // where rays cross it and each span gets the colour of the wedge it lies in.
   float tnow = (float)(s_hour % 12) + (float)s_min / 60.0f + (float)s_sec / 3600.0f;
   int hcur = s_hour % 12;
   float Enow = solve_kepler(TWO_PI * tnow / 12.0f, e);
+  int rx[14], ry[14], nr = 0;
+  GColor rc[14];                                   // colour of the wedge that STARTS at this ray (clockwise)
   for (int k = 0; k < 12; k++) {
-    float E0 = solve_kepler(TWO_PI * (float)k / 12.0f, e);
-    float E1 = solve_kepler(TWO_PI * (float)(k + 1) / 12.0f, e);
-    int sub = 6;
-    for (int j = 0; j < sub; j++) {
-      float Ea = E0 + (E1 - E0) * (float)j / (float)sub, Eb = E0 + (E1 - E0) * (float)(j + 1) / (float)sub;
-      int xa, ya, xb, yb;
-      orbit_pt(Ea, (float)b, &xa, &ya);
-      orbit_pt(Eb, (float)b, &xb, &yb);
-      GColor c = (k % 2) ? GColorOxfordBlue : GColorImperialPurple;
-      if (k == hcur) {
-        c = (Ea + 0.0001f <= Enow && Eb <= Enow + 0.0001f) ? GColorOrange : GColorDarkCandyAppleRed;
-        if (Ea < Enow && Eb > Enow) {                // split the sub-wedge at the planet
-          int xm, ym;
-          orbit_pt(Enow, (float)b, &xm, &ym);
-          tri(GColorOrange, fx, fy, xa, ya, xm, ym);
-          tri(GColorDarkCandyAppleRed, fx, fy, xm, ym, xb, yb);
-          continue;
-        }
-      }
-      tri(c, fx, fy, xa, ya, xb, yb);
+    float Ek = solve_kepler(TWO_PI * (float)k / 12.0f, e);
+    orbit_pt(Ek, (float)b, &rx[nr], &ry[nr]);
+    rc[nr] = (k == hcur) ? GColorOrange : ((k % 2) ? GColorOxfordBlue : GColorImperialPurple);
+    nr++;
+    if (k == hcur) {                               // the planet's own ray splits the current hour
+      orbit_pt(Enow, (float)b, &rx[nr], &ry[nr]);
+      rc[nr] = GColorDarkCandyAppleRed;
+      nr++;
     }
+  }
+  for (int y = CYO - AOR; y <= CYO + AOR; y++) {
+    int dy = y - CYO;
+    int hw = isqrt(b * b * (AOR * AOR - dy * dy) / (AOR * AOR));
+    int bnd[18], nb = 0;
+    bnd[nb++] = CXO - hw;
+    for (int j = 0; j < nr; j++) {
+      int dyj = ry[j] - fy, t = y - fy;
+      if (dyj == 0) continue;
+      if ((dyj > 0 && t >= 0 && t <= dyj) || (dyj < 0 && t <= 0 && t >= dyj)) {
+        int x = fx + (rx[j] - fx) * t / dyj;
+        if (x > CXO - hw && x < CXO + hw) bnd[nb++] = x;
+      }
+    }
+    bnd[nb++] = CXO + hw + 1;
+    for (int i = 1; i < nb; i++) {                 // insertion sort
+      int v = bnd[i], j = i - 1;
+      while (j >= 0 && bnd[j] > v) { bnd[j + 1] = bnd[j]; j--; }
+      bnd[j + 1] = v;
+    }
+    int run_x = bnd[0];
+    GColor run_c = GColorBlack;
+    bool have = false;
+    for (int i = 0; i + 1 < nb; i++) {
+      if (bnd[i + 1] <= bnd[i]) continue;
+      int xm = (bnd[i] + bnd[i + 1]) / 2;
+      GColor c = rc[0];
+      for (int w = 0; w < nr; w++) {
+        int ax = rx[w] - fx, ay = ry[w] - fy;
+        int bx = rx[(w + 1) % nr] - fx, by = ry[(w + 1) % nr] - fy;
+        int vx = xm - fx, vy = y - fy;
+        if (ax * vy - ay * vx >= 0 && vx * by - vy * bx >= 0) { c = rc[w]; break; }
+      }
+      if (!have) { run_x = bnd[i]; run_c = c; have = true; }
+      else if (c.argb != run_c.argb) {
+        R(run_c, run_x, y, bnd[i] - run_x, 1);
+        run_x = bnd[i]; run_c = c;
+      }
+    }
+    if (have) R(run_c, run_x, y, bnd[nb - 1] - run_x, 1);
   }
   // orbit outline and hour spokes
   for (int a = 0; a < 360; a++) {
