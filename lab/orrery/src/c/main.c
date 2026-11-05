@@ -23,7 +23,7 @@ static const Elems EL[6] = {
 };
 
 static int helio_long(int i) {
-  int32_t secs = secs_since_j2000();
+  int64_t secs = secs_since_j2000();
   int64_t l = (int64_t)EL[i].l0_udeg + (int64_t)EL[i].n_udeg_day * secs / 86400;
   l %= 360000000LL;
   if (l < 0) l += 360000000LL;
@@ -35,11 +35,11 @@ static int helio_long(int i) {
 
 // moon phase 0..359 degrees (0 = new, 180 = full) from the synodic month
 static int moon_phase_deg(void) {
-  int32_t secs = secs_since_j2000() - 454000;        // reference new moon: 2000-01-06 18:14 (5.26 d after J2000)
-  int32_t period = 2551443;                          // 29.530588 days in seconds
-  int32_t r = secs % period;
+  int64_t secs = secs_since_j2000() - 454000;        // reference new moon: 2000-01-06 18:14 (5.26 d after J2000)
+  int64_t period = 2551443;                          // 29.530588 days in seconds
+  int64_t r = secs % period;
   if (r < 0) r += period;
-  return (int)((int64_t)r * 360 / period);
+  return (int)(r * 360 / period);
 }
 
 static void face_init(void) {}

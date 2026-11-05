@@ -223,9 +223,9 @@ static int days_from_civil(int y, int m, int d) {
   int doe = yoe * 365 + yoe / 4 - yoe / 100 + doy;
   return era * 146097 + doe - 719468;
 }
-// seconds since J2000 (2000-01-01 12:00), treating the local clock as UTC (fine for visuals)
-static int32_t secs_since_j2000(void) {
-  int days = days_from_civil(s_year, s_mon + 1, s_mday) - 10957;   // 2000-01-01 is day 10957
+// seconds since J2000 (2000-01-01 12:00), treating the local clock as UTC (fine for visuals); 64-bit so any year works
+static int64_t secs_since_j2000(void) {
+  int64_t days = days_from_civil(s_year, s_mon + 1, s_mday) - 10957;   // 2000-01-01 is day 10957
   return days * 86400 + (s_hour - 12) * 3600 + s_min * 60 + s_sec;
 }
 
