@@ -31,8 +31,9 @@ static void lissajous(int a, int b, int phase) {
   const int amp = 74;
   int px = 0, py = 0;
   int bx = 0, by = 0;
-  // two passes: a dim wide halo, then the bright core
-  for (int pass = 0; pass < 2; pass++) {
+  // two passes: a dim wide halo, then the bright core (the halo is skipped for long, busy curves to save work)
+  bool halo = (a == b) || (a + b) <= 7;
+  for (int pass = halo ? 0 : 1; pass < 2; pass++) {
     for (int t = 0; t <= 360; t++) {
       int x = SCX + (amp * isin(a * t + phase)) / 1024;
       int y = SCY - (amp * isin(b * t)) / 1024;

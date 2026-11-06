@@ -211,6 +211,16 @@ static const Glyph MICRO[] = {
   {'=', "000111000111000"}, {'*', "101010111010101"}, {'(', "010100100100010"},
   {')', "010001001001010"}, {'\'', "010010000000000"}, {'^', "010101000000000"},
 };
+// lowercase letters (3x5, x-height 4 with ascenders/descenders squeezed into the grid), used only by micro_mixed()
+static const Glyph MICRO_LC[] = {
+  {'a', "000011101101011"}, {'b', "100100110101110"}, {'c', "000011100100011"}, {'d', "001001011101011"},
+  {'e', "000010101110011"}, {'f', "011010111010010"}, {'g', "000011101011110"}, {'h', "100100110101101"},
+  {'i', "010000010010010"}, {'j', "001000001101010"}, {'k', "100101110101101"}, {'l', "110010010010111"},
+  {'m', "000111111101101"}, {'n', "000110101101101"}, {'o', "000010101101010"}, {'p', "000110101110100"},
+  {'q', "000011101011001"}, {'r', "000011100100100"}, {'s', "000011110011110"}, {'t', "010111010010001"},
+  {'u', "000101101101011"}, {'v', "000101101101010"}, {'w', "000101111111101"}, {'x', "000101010101101"},
+  {'y', "000101101011110"}, {'z', "000111010100111"},
+};
 static int micro_width(const char *s, int sc) {
   int n = (int)strlen(s);
   return n ? n * 4 * sc - sc : 0;
@@ -237,6 +247,29 @@ static void micro(const char *s, int x, int y, int sc, GColor c) {
 }
 static void micro_c(const char *s, int cx, int y, int sc, GColor c) { micro(s, cx - micro_width(s, sc) / 2, y, sc, c); }
 static void micro_r(const char *s, int rx, int y, int sc, GColor c) { micro(s, rx - micro_width(s, sc), y, sc, c); }
+// like micro(), but lowercase letters keep their lowercase shapes (for chemical symbols such as Mg, Fe)
+static void micro_mixed(const char *s, int x, int y, int sc, GColor c) {
+  for (; *s; s++, x += 4 * sc) {
+    const Glyph *tab = MICRO;
+    size_t n = sizeof(MICRO) / sizeof(MICRO[0]);
+    if (*s >= 'a' && *s <= 'z') { tab = MICRO_LC; n = sizeof(MICRO_LC) / sizeof(MICRO_LC[0]); }
+    for (size_t i = 0; i < n; i++) {
+      if (tab[i].ch != *s) continue;
+      for (int r = 0; r < 5; r++) {
+        int k = 0;
+        while (k < 3) {
+          if (tab[i].bits[r * 3 + k] != '1') { k++; continue; }
+          int e = k;
+          while (e < 3 && tab[i].bits[r * 3 + e] == '1') e++;
+          R(c, x + k * sc, y + r * sc, (e - k) * sc, sc);
+          k = e;
+        }
+      }
+      break;
+    }
+  }
+}
+static void micro_mixed_c(const char *s, int cx, int y, int sc, GColor c) { micro_mixed(s, cx - micro_width(s, sc) / 2, y, sc, c); }
 
 // 7-segment neon-tube digit on a 7x11 grid (cell = sc px): glow halo, coloured tube, white core
 static const uint8_t SEG7[10] = {0x3F, 0x06, 0x5B, 0x4F, 0x66, 0x6D, 0x7D, 0x07, 0x7F, 0x6F};

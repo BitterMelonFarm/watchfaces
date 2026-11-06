@@ -2,7 +2,7 @@
 
 A periodic-table watchface for the Pebble Round 2 (`gabbro`). Hour, minute, seconds and day-of-month
 are shown as element tiles - atomic number, symbol, name and atomic mass - coloured by element family.
-12:34 is **Mg** (24.305) and **Se** (78.971); 23:59 is **V** and **Pr**.
+12:34 is **Mg** (24.305; mixed-case symbols use a small lowercase font) and **Se** (78.971); 23:59 is **V** and **Pr**.
 
 ![preview](docs/preview.png)
 

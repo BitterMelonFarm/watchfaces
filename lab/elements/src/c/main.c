@@ -7,12 +7,12 @@
 #include "../../../common/face.h"
 
 static const char *SYM[60] = {
-  "NT", "H", "HE", "LI", "BE", "B", "C", "N", "O", "F",
-  "NE", "NA", "MG", "AL", "SI", "P", "S", "CL", "AR", "K",
-  "CA", "SC", "TI", "V", "CR", "MN", "FE", "CO", "NI", "CU",
-  "ZN", "GA", "GE", "AS", "SE", "BR", "KR", "RB", "SR", "Y",
-  "ZR", "NB", "MO", "TC", "RU", "RH", "PD", "AG", "CD", "IN",
-  "SN", "SB", "TE", "I", "XE", "CS", "BA", "LA", "CE", "PR",
+  "n", "H", "He", "Li", "Be", "B", "C", "N", "O", "F",
+  "Ne", "Na", "Mg", "Al", "Si", "P", "S", "Cl", "Ar", "K",
+  "Ca", "Sc", "Ti", "V", "Cr", "Mn", "Fe", "Co", "Ni", "Cu",
+  "Zn", "Ga", "Ge", "As", "Se", "Br", "Kr", "Rb", "Sr", "Y",
+  "Zr", "Nb", "Mo", "Tc", "Ru", "Rh", "Pd", "Ag", "Cd", "In",
+  "Sn", "Sb", "Te", "I", "Xe", "Cs", "Ba", "La", "Ce", "Pr",
 };
 static const char *NAME[60] = {
   "NEUTRON", "HYDROGEN", "HELIUM", "LITHIUM", "BERYLLIUM", "BORON", "CARBON", "NITROGEN", "OXYGEN", "FLUORINE",
@@ -76,7 +76,7 @@ static void tile(int x, int y, int w, int h, int z, const char *label) {
   micro(buf, x + 6, y + 6, 2, GColorWhite);
   micro_r(MASS[z], x + w - 6, y + 7, 1, GColorWhite);
   int sc = 7;
-  micro_c(SYM[z], x + w / 2, y + 28, sc, GColorWhite);
+  micro_mixed_c(SYM[z], x + w / 2, y + 28, sc, GColorWhite);
   micro_c(NAME[z], x + w / 2, y + h - 15, 1, GColorWhite);
   micro_c(label, x + w / 2, y - 8, 1, GColorLightGray);
 }
@@ -89,7 +89,7 @@ static void tile_small(int x, int y, int w, int h, int z, const char *label) {
   char buf[12];
   snprintf(buf, sizeof(buf), "%d", z);
   micro(buf, x + 5, y + 5, 1, GColorWhite);
-  micro_c(SYM[z], x + w / 2, y + 17, 5, GColorWhite);
+  micro_mixed_c(SYM[z], x + w / 2, y + 17, 5, GColorWhite);
   micro_c(NAME[z], x + w / 2, y + h - 11, 1, GColorWhite);
   micro_c(label, x + w / 2, y - 8, 1, GColorLightGray);
 }
