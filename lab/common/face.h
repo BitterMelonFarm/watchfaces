@@ -119,16 +119,33 @@ static void disc(GColor c, int cx, int cy, int r) {
     R(c, cx - dx, cy + dy, 2 * dx + 1, 1);
   }
 }
-// annulus between radii ri (inner, exclusive) and ro (outer, inclusive)
+// annulus: pixels with ri^2 + ri < dx^2 + dy^2 <= ro^2 + ro (ri = 0 gives a disc).
+// Split into the part where |dx| <= |dy| (drawn as horizontal row spans) and the part where |dx| > |dy|
+// (drawn as vertical column spans), so a thin ring costs a few long rectangles instead of one or two per row.
 static void ring(GColor c, int cx, int cy, int ro, int ri) {
-  for (int dy = -ro; dy <= ro; dy++) {
-    int dxo = isqrt(ro * ro + ro - dy * dy);
-    if (iabs(dy) < ri) {
-      int dxi = isqrt(ri * ri + ri - dy * dy);
-      R(c, cx - dxo, cy + dy, dxo - dxi, 1);
-      R(c, cx + dxi + 1, cy + dy, dxo - dxi, 1);
-    } else {
-      R(c, cx - dxo, cy + dy, 2 * dxo + 1, 1);
+  if (ri <= 0) { disc(c, cx, cy, ro); return; }
+  int vo = ro * ro + ro, vi = ri * ri + ri;
+  for (int dy = -ro; dy <= ro; dy++) {                       // |dx| <= |dy|
+    int ady = iabs(dy);
+    int wo = imin(isqrt(vo - dy * dy), ady);
+    int wi = (vi - dy * dy >= 0) ? imin(isqrt(vi - dy * dy), ady) : -1;
+    if (wi < 0) {
+      R(c, cx - wo, cy + dy, 2 * wo + 1, 1);
+    } else if (wo > wi) {
+      R(c, cx - wo, cy + dy, wo - wi, 1);
+      R(c, cx + wi + 1, cy + dy, wo - wi, 1);
+    }
+  }
+  for (int dx = -ro; dx <= ro; dx++) {                       // |dy| < |dx|
+    int adx = iabs(dx);
+    if (adx == 0) continue;
+    int wo = imin(isqrt(vo - dx * dx), adx - 1);
+    int wi = (vi - dx * dx >= 0) ? imin(isqrt(vi - dx * dx), adx - 1) : -1;
+    if (wi < 0) {
+      R(c, cx + dx, cy - wo, 1, 2 * wo + 1);
+    } else if (wo > wi) {
+      R(c, cx + dx, cy - wo, 1, wo - wi);
+      R(c, cx + dx, cy + wi + 1, 1, wo - wi);
     }
   }
 }

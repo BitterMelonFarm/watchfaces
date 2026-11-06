@@ -37,27 +37,27 @@ project (own UUID, `pebble build`), but they all `#include "../../../common/face
 I can't time anything on a real watch, so `tools/stats.py` counts `fill_rect` calls per frame in the host
 renderer and snapshots pixel hashes. The shared `line()` and micro-font text now merge runs of pixels into
 single rectangles (pixel-identical output, verified by hash), Ripple Tank merges equal-colour runs per row,
-and Kepler Clock fills its wedges scanline by scanline. Before -> after, average calls per frame:
+Kepler Clock fills its wedges scanline by scanline, and the shared `ring()` draws top/bottom caps as row spans and the sides as column spans. Before -> after, average calls per frame:
 Kepler Clock 8,311 -> 2,430; Oscilloscope 3,202 -> 1,653; Pendulum Wave 3,030 -> 1,217; Chaos Clock
-2,716 -> 1,607; Ripple Tank 2,462 -> 1,884; Newton's Cradle 1,285 -> 793. Heaviest now: Gear Train (~4,400)
-and Radar (~2,500). Current numbers:
+2,716 -> 1,607; Ripple Tank 2,462 -> 1,884; Newton's Cradle 1,285 -> 793. Heaviest now: Gear Train (~4,000),
+Kepler Clock (~2,400) and Radar (~2,000); Gear Train was 4,581 and Radar 2,807 originally. Current numbers:
 
 ```
 face        avg calls      max
-gears            4391     4421
-radar            2498     2862
+gears            3987     4017
 kepler           2430     2646
+radar            2010     2374
 ripple           1884     1993
-resistor         1737     1802
-scope            1653     4446
-chaos            1607     1809
+resistor         1523     1588
+scope            1485     2430
+chaos            1449     1651
 logic            1388     1416
-orrery           1355     1484
 analemma         1276     1296
 pendulum         1217     1462
-bohr              915      959
+orrery           1147     1276
+bohr              915      956
 cradle            793      945
-elements          652      711
+elements          648      706
 ```
 
 
