@@ -60,6 +60,17 @@ cradle            793      945
 elements          652      711
 ```
 
+
+## Physics validation
+
+`tests/run_checks.py` compiles the faces' real code (`tests/probe.c`) and checks it against known real-world
+values: seconds since J2000 against Python's `datetime` (including years 1999-2400); Earth's heliocentric
+longitude at the 2025 equinoxes and solstices (within 0.7 degrees); the Moon's phase on nine real new and full
+moons (within 8 degrees, about 16 hours, which is what a mean-synodic-month model can do); the equation of time
+and solar declination on six dates (EoT within 0.5 min, declination within 1 degree); and the residual of
+Kepler's equation for e = 0.5 and 0.7 (under 0.01 rad). All pass. Run it with
+`python3 tests/run_checks.py SCRATCHDIR`.
+
 ## Status / caveats
 
 - Every face builds for `gabbro` and passed a sanitizer sweep (800-2,000 random states each); that sweep
