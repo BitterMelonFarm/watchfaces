@@ -197,6 +197,23 @@ static void tri(GColor c, int x0, int y0, int x1, int y1, int x2, int y2) {
     R(c, xa, y, xb - xa + 1, 1);
   }
 }
+// convex quadrilateral (vertices in order), filled with one row span per scanline
+static void quad(GColor c, int x0, int y0, int x1, int y1, int x2, int y2, int x3, int y3) {
+  int xs[4] = {x0, x1, x2, x3}, ys[4] = {y0, y1, y2, y3};
+  int ymin = imin(imin(y0, y1), imin(y2, y3)), ymax = imax(imax(y0, y1), imax(y2, y3));
+  for (int y = ymin; y <= ymax; y++) {
+    int lo = 1 << 20, hi = -(1 << 20);
+    for (int e = 0; e < 4; e++) {
+      int xa = xs[e], ya = ys[e], xb = xs[(e + 1) & 3], yb = ys[(e + 1) & 3];
+      if (y < imin(ya, yb) || y > imax(ya, yb)) continue;
+      if (ya == yb) { lo = imin(lo, imin(xa, xb)); hi = imax(hi, imax(xa, xb)); continue; }
+      int x = xa + (xb - xa) * (y - ya) / (yb - ya);
+      lo = imin(lo, x);
+      hi = imax(hi, x);
+    }
+    if (lo <= hi) R(c, lo, y, hi - lo + 1, 1);
+  }
+}
 // thick arc from clock angle a0 to a1 (degrees, clockwise), radius r, thickness th
 static void arc(GColor c, int cx, int cy, int r, int th, int a0, int a1) {
   int steps = (a1 - a0) * 3;

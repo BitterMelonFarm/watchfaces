@@ -39,12 +39,12 @@ renderer and snapshots pixel hashes. The shared `line()` and micro-font text now
 single rectangles (pixel-identical output, verified by hash), Ripple Tank merges equal-colour runs per row,
 Kepler Clock fills its wedges scanline by scanline, and the shared `ring()` draws top/bottom caps as row spans and the sides as column spans. Before -> after, average calls per frame:
 Kepler Clock 8,311 -> 2,430; Oscilloscope 3,202 -> 1,653; Pendulum Wave 3,030 -> 1,217; Chaos Clock
-2,716 -> 1,607; Ripple Tank 2,462 -> 1,884; Newton's Cradle 1,285 -> 793. Heaviest now: Gear Train (~4,000),
+2,716 -> 1,607; Ripple Tank 2,462 -> 1,884; Newton's Cradle 1,285 -> 793. Heaviest now: Gear Train (~3,200; teeth use a one-pass convex quad fill),
 Kepler Clock (~2,400) and Radar (~2,000); Gear Train was 4,581 and Radar 2,807 originally. Current numbers:
 
 ```
 face        avg calls      max
-gears            3987     4017
+gears            3185     3211
 kepler           2430     2646
 radar            2010     2374
 ripple           1884     1993

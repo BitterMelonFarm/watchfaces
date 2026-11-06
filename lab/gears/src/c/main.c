@@ -32,8 +32,7 @@ static void gear(int cx, int cy, int T, int pr, int rot_dd, GColor fill, int gro
     math_pt10(cx, cy, root, a + half * 13 / 10, &bx1, &by1);
     math_pt10(cx, cy, tip, a - half * 55 / 100, &tx0, &ty0);
     math_pt10(cx, cy, tip, a + half * 55 / 100, &tx1, &ty1);
-    tri(fill, bx0, by0, bx1, by1, tx1, ty1);
-    tri(fill, bx0, by0, tx1, ty1, tx0, ty0);
+    quad(fill, bx0, by0, bx1, by1, tx1, ty1, tx0, ty0);
   }
 }
 
