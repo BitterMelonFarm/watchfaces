@@ -1,6 +1,7 @@
 // Test probe: compiles a face's real source plus the host stubs, then prints values from its physics code.
 //   gcc -DFACE_SRC='"../orrery/src/c/main.c"' -DPROBE_ORRERY probe.c   (see run_checks.py)
 #define main harness_main
+#include <math.h>
 #include "../tools/render.c"
 #undef main
 
@@ -23,6 +24,19 @@ int main(int argc, char **argv) {
 #endif
 #ifdef PROBE_CORE
   printf("%lld\n", (long long)secs_since_j2000());
+#endif
+#ifdef PROBE_BOHR
+  printf("%d\n", lambda_nm(atoi(argv[7]), atoi(argv[8])));
+#endif
+#ifdef PROBE_CHAOS
+  {
+    // argv[7], argv[8]: initial angles in milli-radians; argv[9]: seconds to integrate
+    St st = {atoi(argv[7]) / 1000.0f, atoi(argv[8]) / 1000.0f, 0.0f, 0.0f};
+    #define ENERGY(S) ((double)((S).w1 * (S).w1 + 0.5 * (S).w2 * (S).w2 + (S).w1 * (S).w2 * cos((S).a1 - (S).a2)) - GRAV * (2 * cos((S).a1) + cos((S).a2)))
+    double e0 = ENERGY(st);
+    for (int i = 0; i < atoi(argv[9]) * STEPS_PER_SEC; i++) st = rk4(st);
+    printf("%d %d\n", (int)(e0 * 1e6), (int)(ENERGY(st) * 1e6));
+  }
 #endif
   return 0;
 }

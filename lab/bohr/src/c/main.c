@@ -22,7 +22,7 @@ static int rad_of(int n) { return 12 + (n - 1) * 16; }
 // wavelength in nm for a transition between ni and nf (ni > nf)
 static int lambda_nm(int ni, int nf) {
   int a = ni * ni, b = nf * nf;
-  return (int)(9113LL * a * b / (a - b) / 100);          // 91.13 nm * ni^2 nf^2 / (ni^2 - nf^2)
+  return (int)(9118LL * a * b / (a - b) / 100);          // (1/R_H = 91.18 nm) * ni^2 nf^2 / (ni^2 - nf^2)
 }
 
 static GColor lambda_col(int nm) {

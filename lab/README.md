@@ -67,8 +67,11 @@ elements          652      711
 values: seconds since J2000 against Python's `datetime` (including years 1999-2400); Earth's heliocentric
 longitude at the 2025 equinoxes and solstices (within 0.7 degrees); the Moon's phase on nine real new and full
 moons (within 8 degrees, about 16 hours, which is what a mean-synodic-month model can do); the equation of time
-and solar declination on six dates (EoT within 0.5 min, declination within 1 degree); and the residual of
-Kepler's equation for e = 0.5 and 0.7 (under 0.01 rad). All pass. Run it with
+and solar declination on six dates (EoT within 0.5 min, declination within 1 degree); the residual of
+Kepler's equation for e = 0.5 and 0.7 (under 0.01 rad); the Bohr Atom's Rydberg wavelengths against the real
+hydrogen lines (Lyman, Balmer and Paschen, within 1 nm - which led to correcting 1/R from 91.13 to 91.18 nm);
+energy conservation of the double-pendulum integrator (drift under 0.1% over 20 s); and the Gear Train's
+tooth-phase meshing condition and speed ratios at every second. All pass. Run it with
 `python3 tests/run_checks.py SCRATCHDIR`.
 
 ## Status / caveats

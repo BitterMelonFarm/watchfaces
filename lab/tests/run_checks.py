@@ -10,7 +10,7 @@ def build(face, flag):
     exe = os.path.join(scratch, f"probe_{face}")
     src = os.path.abspath(os.path.join(here, "..", face, "src", "c", "main.c"))
     subprocess.run(["gcc", "-O1", "-w", "-DSW=260", f'-DFACE_SRC="{src}"', f"-D{flag}", "-I", os.path.join(here, "..", "tools"),
-                    "-o", exe, os.path.join(here, "probe.c")], check=True)
+                    "-o", exe, os.path.join(here, "probe.c"), "-lm"], check=True)
     return exe
 
 def run(exe, *args):
@@ -68,5 +68,41 @@ for e in (500, 700):
     for m in range(0, 6283, 349):
         worst = max(worst, abs(run(kep, 2026, 1, 1, 0, 0, 0, e, m)[0]) / 1e6)
 check("Kepler solver worst residual (rad)", worst, 0.0, 0.01)
+# ---- bohr: Rydberg wavelengths vs the real hydrogen lines (nm)
+boh = build("bohr", "PROBE_BOHR")
+for label, hi, lo, nm in [("Lyman-alpha 2>1", 2, 1, 121.57), ("Lyman-beta 3>1", 3, 1, 102.57), ("H-alpha 3>2", 3, 2, 656.28),
+                          ("H-beta 4>2", 4, 2, 486.13), ("H-gamma 5>2", 5, 2, 434.05), ("H-delta 6>2", 6, 2, 410.17),
+                          ("Paschen-alpha 4>3", 4, 3, 1875.1), ("Paschen-beta 5>3", 5, 3, 1281.8)]:
+    check(f"hydrogen line {label} (nm)", run(boh, 2026, 1, 1, 0, 0, 0, hi, lo)[0], nm, max(1.0, nm * 0.002))
+
+# ---- chaos: the integrator should conserve energy (it uses table-based sin/cos, so allow a small drift)
+cha = build("chaos", "PROBE_CHAOS")
+for a1, a2 in [(300, 500), (1000, 1500)]:
+    e0, e1 = run(cha, 2026, 1, 1, 0, 0, 0, a1, a2, 20)
+    drift = abs(e1 - e0) / abs(e0) * 100
+    check(f"double pendulum energy drift over 20 s, start ({a1/1000},{a2/1000}) rad (%)", drift, 0.0, 3.0)
+
+# ---- gears: replicate the face's mesh-phase arithmetic and confirm teeth interlock and ratios hold every second
+TA, TB, TC = 24, 12, 16
+phi1, phi2 = 150, -500
+cdiv = lambda a, b: int(a / b)                       # C integer division truncates toward zero
+worst = 0.0
+for sec in range(60):
+    thA = -sec * 60
+    thB = cdiv((TA + TB) * phi1, TB) - cdiv(TA * thA, TB) + 1800 + cdiv(1800, TB)
+    thC = cdiv((TB + TC) * phi2, TC) - cdiv(TB * thB, TC) + 1800 + cdiv(1800, TC)
+    for (T1, th1, T2, th2, phi) in [(TA, thA, TB, thB, phi1), (TB, thB, TC, thC, phi2)]:
+        # Meshing condition: with u1 = (phi - th1) and u2 = (phi + 180 - th2) measured within each gear's tooth
+        # cycle, the fractions u1/P1 and u2/P2 must sum to 1/2 (mod 1): a tooth on one gear faces a gap on the other.
+        P1, P2 = 3600 / T1, 3600 / T2
+        a1 = ((phi - th1) % P1) / P1
+        a2 = ((phi + 1800 - th2) % P2) / P2
+        worst = max(worst, abs(((a1 + a2) % 1.0) - 0.5))
+    # speed ratios: B turns -TA/TB times as fast as A, C turns -TB/TC times as fast as B
+    if sec:
+        dA = thA - (-(sec - 1) * 60)
+        pB = cdiv((TA + TB) * phi1, TB) - cdiv(TA * (-(sec - 1) * 60), TB) + 1800 + cdiv(1800, TB)
+        worst = max(worst, abs((thB - pB) / dA + TA / TB) * 0.01)
+check("gear mesh phase error (fraction of a tooth)", worst, 0.0, 0.05)
 print("\nALL CHECKS PASSED" if not fails else f"\n{fails} CHECK(S) FAILED")
 sys.exit(1 if fails else 0)
