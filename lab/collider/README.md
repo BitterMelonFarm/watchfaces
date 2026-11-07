@@ -10,7 +10,7 @@ places at six interaction points (12, 2, 4, 6, 8 and 10 o'clock) where small hex
 (labelled STAR, PHENIX, PHOBOS and BRAHMS from memory of the real RHIC layout - double-check before relying on it).
 
 - **Hour hand** = a bunch of particles on the Blue ring; **minute hand** = a bunch on the Yellow ring. When the two
-  meet (11 times in 12 hours: about 12:00, 1:05, 2:11, ...) they **collide** in a starburst marked `BANG`.
+  meet (11 times in 12 hours: about 12:00, 1:05, 2:10, 3:16, ... 10:54) they **collide** in a starburst marked `BANG`.
 - A "proton" races around the bezel once a minute (the second hand).
 - Central cream time plate with an orange drop shadow and chunky "atomic age" digits, 12h/24h aware, date and A.M./P.M.
 - Steps = **LUMINOSITY** (10-segment bar, orange when the 8,000-step goal is met); battery = **BEAM CURRENT** (mA).
