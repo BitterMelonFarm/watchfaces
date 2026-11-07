@@ -1,6 +1,6 @@
 # lab: physics & engineering watchfaces
 
-Fourteen Pebble Round 2 (`gabbro`, 260x260) watchfaces that share one framework. Each is its own Pebble
+Fifteen Pebble Round 2 (`gabbro`, 260x260) watchfaces that share one framework. Each is its own Pebble
 project (own UUID, `pebble build`), but they all `#include "../../../common/face.h"`.
 
 ![overview](docs/overview.png)
@@ -21,6 +21,7 @@ project (own UUID, `pebble build`), but they all `#include "../../../common/face
 | [`analemma`](analemma) | The Sun's figure-8 over the year, today marked (equation of time + declination) | season / mono |
 | [`bohr`](bohr) | Electron jumps between levels, emitting real hydrogen spectral lines | spectrum history |
 | [`cradle`](cradle) | Newton's cradle: n in, n out (n from the minute) | ball style |
+| [`collider`](collider) | Retro-future RHIC-style collider dial (Blue/Yellow beam bunches collide when the hands meet); *Tennis for Two* mode | collider / Tennis for Two |
 
 ## Shared pieces
 
