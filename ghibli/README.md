@@ -15,6 +15,7 @@ clouds, hill layers) and the lab's preview and sanity-check tools.
 | [`lanternwood`](lanternwood) | Komorebi forest: light shafts, stone lantern, one forest spirit per hour, fireflies for steps, time on a paper lantern |
 | [`rainwindow`](rainwindow) | Rainy window: time in condensation, steaming teapot, battery teacups, sleepy cat, plant growing per 1,000 steps |
 | [`harbor`](harbor) | Seaside cliff town with a sweeping lighthouse beam, sailboats per 2,000 steps, time on bunting flags |
+| [`hilltop`](hilltop) | Starry hilltop: time as a constellation, real moon phase, shooting star each minute, tent and lantern tree |
 
 ## Shared pieces
 
