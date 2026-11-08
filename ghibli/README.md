@@ -9,3 +9,4 @@ clouds, hill layers) and the lab's preview and sanity-check tools.
 |---|---|
 | [`meadow`](meadow) | Day-cycle meadow with cottage, drifting clouds, sun/moon on the real time, flowers for steps |
 | [`tiderail`](tiderail) | Calm sea with a little steam train crossing a causeway (train = minute hand), buoys for steps |
+| [`skyisle`](skyisle) | Floating island with a windmill, tree and waterfall; time on a cloud, birds for steps, lanterns for battery |
