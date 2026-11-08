@@ -40,6 +40,25 @@ static void plate(int x, int y, int w, int h, int rad, GColor fill, GColor edge,
   RR(fill, x + 2, y + 2, w - 4, h - 4, rad > 2 ? rad - 2 : rad);
 }
 
+// triangle filled on even rows only, so it reads as a translucent beam of light
+static void tri_half(GColor c, int x0, int y0, int x1, int y1, int x2, int y2) {
+  int ymin = imin(y0, imin(y1, y2)), ymax = imax(y0, imax(y1, y2));
+  int xs[3] = {x0, x1, x2}, ys[3] = {y0, y1, y2};
+  for (int y = ymin; y <= ymax; y++) {
+    if (y & 1) continue;
+    int lo = 1 << 20, hi = -(1 << 20);
+    for (int e = 0; e < 3; e++) {
+      int xa = xs[e], ya = ys[e], xb = xs[(e + 1) % 3], yb = ys[(e + 1) % 3];
+      if (y < imin(ya, yb) || y > imax(ya, yb)) continue;
+      if (ya == yb) { lo = imin(lo, imin(xa, xb)); hi = imax(hi, imax(xa, xb)); continue; }
+      int x = xa + (xb - xa) * (y - ya) / (yb - ya);
+      lo = imin(lo, x);
+      hi = imax(hi, x);
+    }
+    if (lo <= hi) R(c, lo, y, hi - lo + 1, 1);
+  }
+}
+
 static void bird(int x, int y, int flap, GColor c) {          // a small "v" bird
   line(c, x - 4, y - flap, x, y, 1);
   line(c, x, y, x + 4, y - flap, 1);
