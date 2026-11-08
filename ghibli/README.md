@@ -11,3 +11,4 @@ clouds, hill layers) and the lab's preview and sanity-check tools.
 | [`tiderail`](tiderail) | Calm sea with a little steam train crossing a causeway (train = minute hand), buoys for steps |
 | [`skyisle`](skyisle) | Floating island with a windmill, tree and waterfall; time on a cloud, birds for steps, lanterns for battery |
 | [`lanternwood`](lanternwood) | Komorebi forest: light shafts, stone lantern, one forest spirit per hour, fireflies for steps, time on a paper lantern |
+| [`rainwindow`](rainwindow) | Rainy window: time in condensation, steaming teapot, battery teacups, sleepy cat, plant growing per 1,000 steps |
