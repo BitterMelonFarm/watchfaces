@@ -11,39 +11,8 @@
 static void face_init(void) { s_aux %= 2; }
 static void face_tap(void) { s_aux = (s_aux + 1) % 2; }
 
-typedef struct { GColor top, mid, hor, cloud_lit, cloud_body, cloud_shade, far, midh, near, lightg; } Sky;
-static Sky sky_for(int m) {
-  if (m >= 1260 || m < 300)                       // night
-    return (Sky){GColorOxfordBlue, GColorDukeBlue, GColorIndigo, GColorBabyBlueEyes, GColorLiberty, GColorDukeBlue,
-                 GColorDarkGreen, GColorDarkGreen, GColorIslamicGreen, GColorJaegerGreen};
-  if (m < 420)                                    // dawn
-    return (Sky){GColorBabyBlueEyes, GColorMelon, GColorRajah, GColorWhite, GColorMelon, GColorRichBrilliantLavender,
-                 GColorJaegerGreen, GColorMayGreen, GColorKellyGreen, GColorInchworm};
-  if (m < 1020)                                   // day
-    return (Sky){GColorVividCerulean, GColorPictonBlue, GColorCeleste, GColorWhite, GColorWhite, GColorBabyBlueEyes,
-                 GColorJaegerGreen, GColorMayGreen, GColorKellyGreen, GColorBrightGreen};
-  if (m < 1140)                                   // golden hour
-    return (Sky){GColorPictonBlue, GColorRajah, GColorChromeYellow, GColorPastelYellow, GColorMelon, GColorRajah,
-                 GColorMayGreen, GColorKellyGreen, GColorInchworm, GColorSpringBud};
-  return (Sky){GColorIndigo, GColorPurpureus, GColorSunsetOrange, GColorMelon, GColorRichBrilliantLavender, GColorPurpureus,   // dusk
-               GColorDarkGreen, GColorJaegerGreen, GColorMayGreen, GColorKellyGreen};
-}
-
 static const char *DAYS[7] = {"SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"};
 static const char *MONS[12] = {"JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"};
-
-static const char *BIG[10][7] = {
-  {"01110", "10001", "10011", "10101", "11001", "10001", "01110"}, {"00100", "01100", "00100", "00100", "00100", "00100", "01110"},
-  {"01110", "10001", "00001", "00110", "01000", "10000", "11111"}, {"11110", "00001", "00001", "01110", "00001", "00001", "11110"},
-  {"00010", "00110", "01010", "10010", "11111", "00010", "00010"}, {"11111", "10000", "11110", "00001", "00001", "10001", "01110"},
-  {"00110", "01000", "10000", "11110", "10001", "10001", "01110"}, {"11111", "00001", "00010", "00100", "01000", "01000", "01000"},
-  {"01110", "10001", "10001", "01110", "10001", "10001", "01110"}, {"01110", "10001", "10001", "01111", "00001", "00010", "01100"},
-};
-static void big_digit(int d, int x, int y, int sc, GColor c) {
-  for (int r = 0; r < 7; r++)
-    for (int k = 0; k < 5; k++)
-      if (BIG[d][r][k] == '1') R(c, x + k * sc, y + r * sc, sc, sc);
-}
 
 static void face_draw(void) {
   const int m = s_hour * 60 + s_min;
