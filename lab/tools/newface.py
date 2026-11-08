@@ -2,7 +2,8 @@
 """Scaffold a lab face project: python3 newface.py <dir-name> "<Display Name>" """
 import json, os, sys, uuid, shutil
 name, display = sys.argv[1], sys.argv[2]
-root = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", name)
+base = sys.argv[3] if len(sys.argv) > 3 else os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")   # optional: parent folder
+root = os.path.join(base, name)
 os.makedirs(os.path.join(root, "src", "c"), exist_ok=True)
 pkg = {"name": name, "author": "edutch95", "version": "1.0.0", "keywords": ["pebble-app"], "private": True,
        "dependencies": {},
