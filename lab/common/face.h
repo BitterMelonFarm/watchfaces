@@ -101,6 +101,19 @@ static void math_pt(int cx, int cy, int r, int deg, int *x, int *y) {
   *y = cy - (r * isin(deg) + (r >= 0 ? 512 : -512)) / 1024;
 }
 
+// lighten (d > 0) or darken (d < 0) a colour by stepping each 2-bit channel
+static GColor shade(GColor c, int d) {
+  int r = (c.argb >> 4) & 3, gg = (c.argb >> 2) & 3, b = c.argb & 3;
+  r += d; gg += d; b += d;
+  if (r < 0) r = 0;
+  if (r > 3) r = 3;
+  if (gg < 0) gg = 0;
+  if (gg > 3) gg = 3;
+  if (b < 0) b = 0;
+  if (b > 3) b = 3;
+  return (GColor){.argb = (uint8_t)(0xC0 | (r << 4) | (gg << 2) | b)};
+}
+
 // ------------------------------------------------------------------ drawing
 static void R(GColor c, int x, int y, int w, int h) {
   if (w <= 0 || h <= 0) return;
