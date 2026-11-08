@@ -98,3 +98,24 @@ static void big_digit(int d, int x, int y, int sc, GColor c) {
       if (BIG[d][r][k] == '1') R(c, x + k * sc, y + r * sc, sc, sc);
 }
 
+
+// ---- real moon phase (0 = new, 180 = full), from the mean synodic month; 64-bit seconds since J2000 ----
+static int moon_phase_deg(void) {
+  int64_t secs = secs_since_j2000() - 454000;           // reference new moon 2000-01-06 18:14
+  int64_t period = 2551443;                            // 29.530588 days in seconds
+  int64_t r = secs % period;
+  if (r < 0) r += period;
+  return (int)(r * 360 / period);
+}
+
+// a moon disc showing the given phase (waxing = lit on the right), radius r
+static void moon_disc(int cx, int cy, int r, int phase, GColor lit, GColor dark) {
+  int ct = icos(phase);
+  for (int dy = -r; dy <= r; dy++) {
+    int w = isqrt(r * r + r - dy * dy);
+    R(dark, cx - w, cy + dy, 2 * w + 1, 1);
+    int xt = w * ct / 1024;
+    if (phase <= 180) { if (xt <= w) R(lit, cx + xt, cy + dy, w - xt + 1, 1); }
+    else R(lit, cx - w, cy + dy, -xt + w + 1, 1);
+  }
+}
