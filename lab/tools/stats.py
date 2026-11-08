@@ -6,7 +6,13 @@ import os, sys, subprocess, hashlib, json, random
 here = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, here)
 import preview_lib as P
-FACES = "orrery scope elements gears pendulum resistor radar chaos ripple kepler logic analemma bohr cradle".split()
+ROOT = os.path.abspath(os.path.join(here, "..", ".."))
+FACES = []                                           # (name, directory) for every face under lab/ and ghibli/
+for group in ("lab", "ghibli"):
+    gdir = os.path.join(ROOT, group)
+    for n in sorted(os.listdir(gdir)):
+        if os.path.exists(os.path.join(gdir, n, "package.json")):
+            FACES.append((n, os.path.join(gdir, n)))
 out = sys.argv[1]
 os.makedirs(out, exist_ok=True)
 rnd = random.Random(3)
@@ -14,8 +20,7 @@ states = [(rnd.randrange(24), rnd.randrange(60), rnd.randrange(60), rnd.randrang
            2026, rnd.choice([100, 4000, 9000]), rnd.choice([10, 60, 100]), rnd.randrange(8), rnd.randrange(3), 1, rnd.choice([0, 1]))
           for _ in range(12)]
 hashes, table = {}, []
-for f in FACES:
-    d = os.path.join(here, "..", f)
+for f, d in FACES:
     sub = os.path.join(out, f)
     P.build(d, sub)
     calls = []
